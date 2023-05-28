@@ -95,14 +95,7 @@ int main()
 
     rmod_release_xml(&root);
 
-
-//    rmod_release_xml(&root);
-    exit(0);
-    rmod_release_xml(&root);
-//    rmod_result res = rmod_parse_input_xml(size - 1, memory, &n_types, &p_types, &n_elements, &p_elements, &master_type_id);
-//    assert(res == RMOD_RESULT_SUCCESS);
-//    jfree(p_types);
-//    jfree(p_elements);
+    rmod_destroy_types(n_types, p_types);
 
     free(memory);
 

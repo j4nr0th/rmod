@@ -110,4 +110,6 @@ rmod_result rmod_serialize_xml(xml_element* root, FILE* f_out);
 
 rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_element_type** pp_types);
 
+rmod_result rmod_destroy_types(u32 n_types, rmod_element_type* types);
+
 #endif //RMOD_GRAPH_PARSING_H

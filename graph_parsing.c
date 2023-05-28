@@ -940,7 +940,15 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                 res = RMOD_RESULT_BAD_XML;
                 goto failed;
             }
-
+            //  Check that name is not yet taken
+            for (u32 j = 0; j < type_count; ++j)
+            {
+                if (compare_string_segments(&types[j].type.type_name, &name_v))
+                {
+                    RMOD_ERROR("Block/chain type \"%*.s\" was already defined", name_v.len, name_v.begin);
+                    goto failed;
+                }
+            }
             //  Block can now be put in the type array
             if (type_count == type_capacity)
             {
@@ -1326,6 +1334,15 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
             }
             //  Now convert intermediate elements into proper form
             //  Make sure there's enough space for all of them
+
+            for (u32 j = 0; j < type_count; ++j)
+            {
+                if (compare_string_segments(&types[j].type.type_name, name_ptr))
+                {
+                    RMOD_ERROR("Block/chain type \"%*.s\" was already defined", name_ptr->len, name_ptr->begin);
+                    goto failed;
+                }
+            }
             const u32 chain_element_count = part_count;
             rmod_chain_element* const chain_elements = jalloc(sizeof*chain_elements * part_count);
             if (!chain_elements)
@@ -1488,7 +1505,55 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                 out->label = *this->label;
                 out->type_value = this->type_id;
             }
+            //  Ensure that there is correspondence between children and parents
+            for (u32 j = 0; j < chain_element_count; ++j)
+            {
+                const rmod_chain_element* element = chain_elements + j;
+                //  Check children
+                for (u32 k = 0; k < element->child_count; ++k)
+                {
+                    bool was_found = false;
+                    const rmod_chain_element* child_element = chain_elements + element->children[k];
+                    for (u32 l = 0; l < child_element->parent_count; ++l)
+                    {
+                        if (child_element->parents[l] == j)
+                        {
+                            was_found = true;
+                            break;
+                        }
+                    }
+                    if (!was_found)
+                    {
+                        RMOD_ERROR("Element with label \"%.*s\" is not specified as parent of one of its children with label \"%.*s\"", element->label.len, element->label.begin, child_element->label.len, child_element->label.begin);
+                        res = RMOD_RESULT_BAD_XML;
+                        jfree(chain_elements);
+                        goto failed;
+                    }
+                }
+                //  Check parents
+                for (u32 k = 0; k < element->parent_count; ++k)
+                {
+                    bool was_found = false;
+                    const rmod_chain_element* parent_element = chain_elements + element->parents[k];
+                    for (u32 l = 0; l < parent_element->child_count; ++l)
+                    {
+                        if (parent_element->children[l] == j)
+                        {
+                            was_found = true;
+                            break;
+                        }
+                    }
+                    if (!was_found)
+                    {
+                        RMOD_ERROR("Element with label \"%.*s\" is not specified as child of one of its parents with label \"%.*s\"", element->label.len, element->label.begin, parent_element->label.len, parent_element->label.begin);
+                        res = RMOD_RESULT_BAD_XML;
+                        jfree(chain_elements);
+                        goto failed;
+                    }
+                }
+            }
             part_count = 0;
+
             //  Chain was now parsed insert it into the type array
             if (type_count == type_capacity)
             {
@@ -1719,4 +1784,32 @@ failure:
     lin_jfree(allocator, buffer);
     RMOD_LEAVE_FUNCTION;
     return res;
+}
+
+rmod_result rmod_destroy_types(u32 n_types, rmod_element_type* types)
+{
+    RMOD_ENTER_FUNCTION;
+    for (u32 i = 0; i < n_types; ++i)
+    {
+        switch (types[i].type.type)
+        {
+        case RMOD_ELEMENT_TYPE_CHAIN:
+        {
+            rmod_chain* const this = &types[i].chain;
+            for (u32 j = 0; j < this->element_count; ++j)
+            {
+                jfree(this->chain_elements[j].parents);
+                jfree(this->chain_elements[j].children);
+            }
+            jfree(this->chain_elements);
+        }
+            break;
+        case RMOD_ELEMENT_TYPE_BLOCK:break;
+        default:RMOD_WARN("Unknown type encountered for type \"%.*s\"", types->type.type_name.len, types->type.type_name.begin);
+            break;
+        }
+    }
+    jfree(types);
+    RMOD_LEAVE_FUNCTION;
+    return RMOD_RESULT_SUCCESS;
 }

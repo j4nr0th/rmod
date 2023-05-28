@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rmod>
+    <block>
+        <name>pump</name>
+        <reliability>0.96</reliability>
+        <effect>3.14</effect>
+        <failure>critical</failure>
+    </block>
+
+    <block>
+        <name>refinery</name>
+        <reliability>0.9</reliability>
+        <effect>0.5</effect>
+        <failure>normal</failure>
+    </block>
+
+    <chain>
+        <name>master</name>
+        <first>master_pump</first>
+        <last>stage_two_refinery</last>
+
+        <element etype="block">
+            <type>pump</type>
+            <label>master_pump</label>
+            <child>stage_one_refinery_1</child>
+            <child>stage_one_refinery_2</child>
+        </element>
+
+        <element etype="block">
+            <type>refinery</type>
+            <label>stage_one_refinery_1</label>
+            <parent>master_pump</parent>
+            <child>stage_two_refinery</child>
+        </element>
+
+        <element etype="block">
+            <type>refinery</type>
+            <label>stage_one_refinery_2</label>
+            <parent>master_pump</parent>
+            <child>stage_two_refinery</child>
+        </element>
+
+        <element etype="block">
+            <type>refinery</type>
+            <label>stage_two_refinery</label>
+            <parent>stage_one_refinery_1</parent>
+            <parent>stage_one_refinery_2</parent>
+        </element>
+    </chain>
+</rmod>

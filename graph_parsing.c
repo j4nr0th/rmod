@@ -1341,7 +1341,7 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                 //  Process parents
                 if (this->parent_count)
                 {
-                    u32* const parents = jalloc(sizeof*parents * this->parent_count);
+                    ptrdiff_t* const parents = jalloc(sizeof*parents * this->parent_count);
                     if (!parents)
                     {
                         RMOD_ERROR("Failed jalloc(%zu)", sizeof*parents * this->parent_count);
@@ -1389,7 +1389,7 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                 //  Process children
                 if (this->child_count)
                 {
-                    u32* const children = jalloc(sizeof*children * this->child_count);
+                    ptrdiff_t* const children = jalloc(sizeof*children * this->child_count);
                     if (!children)
                     {
                         RMOD_ERROR("Failed jalloc(%zu)", sizeof*children * this->child_count);
@@ -1499,6 +1499,21 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                 jfree(element_buffer[j].parent_names);
             }
             part_count = 0;
+            
+            //  Convert block relation (parent & child) into relative offsets. This allows for easier merging of chains
+            for (u32 j = 0; j < chain_element_count; ++j)
+            {
+                const rmod_chain_element* element = chain_elements + j;
+                for (u32 k = 0; k < element->child_count; ++k)
+                {
+                    element->children[k] -= j;
+                }
+                for (u32 k = 0; k < element->parent_count; ++k)
+                {
+                    element->parents[k] -= j;
+                }
+            }
+            
 
             //  Chain was now parsed insert it into the type array
             if (type_count == type_capacity)
@@ -1662,14 +1677,14 @@ rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const r
                 for (u32 j = 0; j < e->parent_count; ++j)
                 {
                     ADD_STRING_LITERAL("\t\t\t<parent>");
-                    ADD_STRING_SEGMENT(this->chain_elements[e->parents[j]].label);
+                    ADD_STRING_SEGMENT((e + e->parents[j])->label);
                     ADD_STRING_LITERAL("</parent>\n");
                 }
 
                 for (u32 j = 0; j < e->child_count; ++j)
                 {
                     ADD_STRING_LITERAL("\t\t\t<child>");
-                    ADD_STRING_SEGMENT(this->chain_elements[e->children[j]].label);
+                    ADD_STRING_SEGMENT((e + e->children[j])->label);
                     ADD_STRING_LITERAL("</child>\n");
                 }
 

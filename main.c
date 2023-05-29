@@ -1,5 +1,6 @@
 #include "rmod.h"
 #include "graph_parsing.h"
+#include "compile.h"
 
 #include <stdio.h>
 
@@ -94,6 +95,11 @@ int main()
     lin_jfree(G_LIN_JALLOCATOR, text);
 
     rmod_release_xml(&root);
+
+    rmod_graph graph_a;
+    res = rmod_compile_graph(n_types, p_types, "chain A", "master", &graph_a);
+    assert(res == RMOD_RESULT_SUCCESS);
+//    rmod_destroy_graph(&graph_a);
 
     rmod_destroy_types(n_types, p_types);
 

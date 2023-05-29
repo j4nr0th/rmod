@@ -61,9 +61,9 @@ struct rmod_chain_element_struct
     element_type_id type_id;
     string_segment label;
     u32 parent_count;
-    u32* parents;
+    ptrdiff_t* parents;
     u32 child_count;
-    u32* children;
+    ptrdiff_t* children;
 };
 
 typedef struct rmod_chain_struct rmod_chain;

@@ -8,6 +8,23 @@
 
 
 typedef uint_fast32_t rmod_graph_node_id, rmod_graph_type_id;
+typedef struct rmod_graph_node_struct rmod_graph_node;
+struct rmod_graph_node_struct
+{
+    rmod_graph_type_id type_id;
+    u32 child_count;
+    u32* children;
+    u32 parent_count;
+    u32* parents;
+};
+typedef struct rmod_graph_node_type_struct rmod_graph_node_type;
+struct rmod_graph_node_type_struct
+{
+    c8* name;
+    f32 reliability;
+    f32 effect;
+    rmod_failure_type failure_type;
+};
 
 typedef struct rmod_graph_struct rmod_graph;
 struct rmod_graph_struct
@@ -17,19 +34,12 @@ struct rmod_graph_struct
     c8* graph_type;                         //  Should be the chain's name
 
     //  Node information
-    uint_fast32_t node_count;               //  Number of nodes in the graph
-    rmod_graph_type_id* type_list;               //  Array of types of individual nodes
-    u32* child_count_list;                  //  Array of child counts of individual nodes
-    rmod_graph_node_id** child_array_list;       //  Array of arrays with indices of children
-    u32* parent_count_list;                 //  Array of parent counts of individual nodes
-    rmod_graph_node_id** parent_array_list;      //  Array of arrays with indices of parents
+    uint_fast32_t node_count;               //  Number of nodes
+    rmod_graph_node* node_list;             //  Array of nodes
 
     //  Type information
     uint_fast32_t type_count;               //  Number of node types
-    c8** type_names;                        //  Array of type names
-    f32* reliability_list;                  //  Array of type reliabilities
-    f32* effect_list;                       //  Array of type effects
-    rmod_failure_type* failure_type_list;   //  Array of type failure types
+    rmod_graph_node_type* type_list;        //  Array of node types
 };
 
 

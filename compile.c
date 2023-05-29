@@ -46,6 +46,35 @@ static u32 compute_dependants_counts(const chain_dependency_info* const info_lis
     return info->dependency_count + child_dependency_total;
 }
 
+static rmod_result copy_element(const rmod_chain_element* const this, rmod_chain_element* const dest)
+{
+    RMOD_ENTER_FUNCTION;
+    ptrdiff_t* new_parents, *new_children;
+    new_parents = jalloc(this->parent_count * sizeof(*new_parents));
+    if (!new_parents)
+    {
+        RMOD_ERROR("Failed jalloc(%zu)",this->parent_count * sizeof(*new_parents));
+        RMOD_LEAVE_FUNCTION;
+        return RMOD_RESULT_NOMEM;
+    }
+    new_children = jalloc(this->parent_count * sizeof(*new_children));
+    if (!new_children)
+    {
+        jfree(new_parents);
+        RMOD_ERROR("Failed jalloc(%zu)",this->parent_count * sizeof(*new_children));
+        RMOD_LEAVE_FUNCTION;
+        return RMOD_RESULT_NOMEM;
+    }
+    static_assert(sizeof(*dest) == sizeof(*this));
+    memcpy(dest, this, sizeof(*this));
+    dest->parents = new_parents;
+    memcpy(new_parents, this->parents, this->parent_count * sizeof(*new_parents));
+    dest->children = new_children;
+    memcpy(new_children, this->children, this->parent_count * sizeof(*new_children));
+    RMOD_LEAVE_FUNCTION;
+    return RMOD_RESULT_SUCCESS;
+}
+
 rmod_result rmod_compile_graph(
         u32 n_types, const rmod_element_type* p_types, const char* chain_name, const char* module_name,
         rmod_graph* p_out)
@@ -56,18 +85,20 @@ rmod_result rmod_compile_graph(
 
     //  Search for proper chain
     u32 chain_count = 0;
-    const rmod_chain* chain = NULL;
+    u32 total_chain_name_memory = 0;
+    const rmod_chain* target_chain = NULL;
     for (u32 i = 0; i < n_types; ++i)
     {
         const bool is_chain = p_types[i].type.type == RMOD_ELEMENT_TYPE_CHAIN;
         if (is_chain && strncmp(chain_name, p_types[i].type.type_name.begin, p_types[i].type.type_name.len) == 0)
         {
-            assert(!chain);
-            chain = &p_types[i].chain;
+            assert(!target_chain);
+            target_chain = &p_types[i].chain;
         }
         chain_count += is_chain;
+        total_chain_name_memory += p_types[i].type.type_name.len + 1;
     }
-    if (!chain)
+    if (!target_chain)
     {
         RMOD_ERROR("Could not find chain named \"%s\"", chain_name);
         res = RMOD_RESULT_BAD_CHAIN_NAME;
@@ -89,13 +120,7 @@ rmod_result rmod_compile_graph(
         res = RMOD_RESULT_NOMEM;
         goto failed;
     }
-    rmod_graph* chain_build_array  = lin_jalloc(G_LIN_JALLOCATOR, sizeof(*chain_build_array) * chain_count);
-    if (!chain_build_array)
-    {
-        RMOD_ERROR("Failed lin_jalloc(%p, %zu)", G_LIN_JALLOCATOR, sizeof(*chain_build_array) * chain_count);
-        res = RMOD_RESULT_NOMEM;
-        goto failed;
-    }
+    u32 needed_count = 1;
 
     //  Find the proper build order
     {
@@ -125,7 +150,7 @@ rmod_result rmod_compile_graph(
             {
                 continue;
             }
-            if (&p_types[i].chain == chain)
+            if (&p_types[i].chain == target_chain)
             {
                 chain_idx = j;
             }
@@ -203,11 +228,9 @@ rmod_result rmod_compile_graph(
             res = RMOD_RESULT_NOMEM;
             goto failed;
         }
-        u32 queue_start = 0;
         u32 queue_count = 0;
 
 
-        u32 needed_count = 1;
         needed_dependencies[0] = dependency_info_list[chain_idx];
         for (u32 i = 0; i < needed_count; ++i)
         {
@@ -216,7 +239,7 @@ rmod_result rmod_compile_graph(
             //  in the array and add them if not
             for (u32 j = 0; j < needed_dependencies[i].dependency_count; ++j)
             {
-                const u32 dependency = needed_dependencies->dependency_list[j];
+                const u32 dependency = needed_dependencies[i].dependency_list[j];
                 u32 k;
                 for (k = 0; k < needed_count; ++k)
                 {
@@ -227,7 +250,7 @@ rmod_result rmod_compile_graph(
                 }
                 if (k == needed_count)
                 {
-                    needed_dependencies[k] = dependency_info_list[k];
+                    needed_dependencies[k] = dependency_info_list[dependency];
                     needed_count += 1;
                 }
             }
@@ -246,9 +269,9 @@ rmod_result rmod_compile_graph(
                 {
                     //  Take it out of the array and move it into the queue
                     u32 idx = needed_dependencies[i].index;
-                    queue[queue_start + queue_count++] = idx;
+                    queue[queue_count++] = idx;
                     memmove(needed_dependencies + i, needed_dependencies + i + 1, sizeof(*needed_dependencies) * (left_to_sort - 1 - i));
-                    memset(needed_dependencies + left_to_sort, 0, sizeof(*needed_dependencies));
+                    memset(needed_dependencies + left_to_sort - 1, 0, sizeof(*needed_dependencies));
                     left_to_sort -= 1;
                     i -= 1;
 
@@ -273,20 +296,19 @@ rmod_result rmod_compile_graph(
             //      If queue is empty, there is at least one cycle in the chain dependencies
             if (queue_count == 0)
             {
-                RMOD_ERROR("Cyclical dependencies for chain \"%s\" were found");
+                RMOD_ERROR("Cyclical dependencies for chain \"%s\" were found", chain_name);
                 res = RMOD_RESULT_CYCLICAL_CHAIN_DEPENDENCY;
                 goto failed;
             }
 
             for (u32 i = 0; i < queue_count; ++i)
             {
-                build_order_array[sorted_count++] = queue[queue_start + i];
+                build_order_array[sorted_count++] = queue[i];
             }
             queue_count = 0;
 
             assert(sorted_count + left_to_sort == needed_count);
         }
-
 
 
         lin_jfree(G_LIN_JALLOCATOR, queue);
@@ -299,15 +321,107 @@ rmod_result rmod_compile_graph(
     //  build_order_array has the order in which the chains have to be built (0 corresponding to the first element in chain_index_array)
     //  chain_build_array has space where built chains can be inserted into
 
+    rmod_graph* const chain_build_array  = lin_jalloc(G_LIN_JALLOCATOR, sizeof(*chain_build_array) * needed_count);
+    if (!chain_build_array)
+    {
+        RMOD_ERROR("Failed lin_jalloc(%p, %zu)", G_LIN_JALLOCATOR, sizeof(*chain_build_array) * chain_count);
+        res = RMOD_RESULT_NOMEM;
+        goto failed;
+    }
+    c8* const chain_name_buffer = lin_jalloc(G_LIN_JALLOCATOR, total_chain_name_memory);
+    if (!chain_name_buffer)
+    {
+        RMOD_ERROR("Failed lin_jalloc(%p, %zu)", G_LIN_JALLOCATOR, total_chain_name_memory);
+        res = RMOD_RESULT_NOMEM;
+        goto failed;
+    }
+    u32 name_usage = 0;
+
     //  Compile chains based on their topological ordering (nice fancy words)
+    u32 built_count = 0;
+    for (u32 i = 0; i < needed_count; ++i, ++built_count)
+    {
+        const u32 chain_to_build_index = build_order_array[i];
+        const rmod_chain* const chain = &p_types[chain_index_array[chain_to_build_index]].chain;
+        assert(chain->type_header.type == RMOD_ELEMENT_TYPE_CHAIN);
+        RMOD_INFO("Building chain \"%.*s\"", chain->type_header.type_name.len, chain->type_header.type_name.begin);
+
+        //  Building a chain means substituting all of its elements for blocks this requires all of its dependencies to
+        //  also be built already
+
+        u32 total_element_count = 0;
+        for (u32 j = 0; j < chain->element_count; ++j)
+        {
+            const rmod_chain_element* element = chain->chain_elements + j;
+            const rmod_element_type* element_type = p_types + element->type_id;
+            switch (element_type->type.type)
+            {
+            case RMOD_ELEMENT_TYPE_BLOCK:
+                total_element_count += 1;
+                break;
+            case RMOD_ELEMENT_TYPE_CHAIN:
+                total_element_count += element_type->chain.element_count;
+                break;
+            default:RMOD_ERROR("Element type \"%.*s\" had invalid type", element_type->type.type_name.len, element_type->type.type_name.begin);
+            res = RMOD_RESULT_BAD_XML;
+            goto failed;
+            }
+        }
+        if (total_element_count == chain->element_count)
+        {
+            //  Chain already only contains elements
+            continue;
+        }
+
+        rmod_chain_element* const new_element_array = jalloc(total_element_count * sizeof*new_element_array);
+        if (!new_element_array)
+        {
+            RMOD_ERROR("Failed jalloc(%zu)", total_element_count * sizeof*new_element_array);
+            res = RMOD_RESULT_NOMEM;
+            goto failed;
+        }
+        memset(new_element_array, 0, total_element_count * sizeof*new_element_array);
+        u32 new_elements = 0, adjust_amount = 0;
+        //  First copy over all elements
+        for (u32 j = 0; j < chain->element_count; ++j)
+        {
+            const rmod_chain_element* element = chain->chain_elements + j;
+            if ((res = copy_element(element, new_element_array + j)) != RMOD_RESULT_SUCCESS)
+            {
+                RMOD_ERROR("Failed copying an element");
+                goto failed_conversion;
+            }
+        }
+
+        //  Now performa a topological sort of the elements
 
 
+        //  Lastly go through the element list and
+
+        continue;
+    failed_conversion:
+        for (u32 j = 0; j < new_elements; ++j)
+        {
+            jfree(new_element_array[j].parents);
+            jfree(new_element_array[j].children);
+        }
+        jfree(new_element_array);
+        goto failed;
+    }
+
+    lin_jfree(G_LIN_JALLOCATOR, chain_name_buffer);
     lin_jfree(G_LIN_JALLOCATOR, chain_build_array);
     lin_jfree(G_LIN_JALLOCATOR, build_order_array);
     lin_jfree(G_LIN_JALLOCATOR, chain_index_array);
 
     RMOD_LEAVE_FUNCTION;
     return RMOD_RESULT_SUCCESS;
+//free_failed:
+//    for (u32 i = 0; i < built_count; ++i)
+//    {
+//        jfree(chain_build_array[i].node_list);
+//        jfree(chain_build_array[i].type_list);
+//    }
 
 failed:
     lin_jalloc_set_current(G_LIN_JALLOCATOR, base_lin_alloc);

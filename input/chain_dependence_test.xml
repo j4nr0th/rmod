@@ -14,6 +14,12 @@
 
         <element etype="block">
             <type>block a</type>
+            <label>last</label>
+            <parent>s2</parent>
+            <parent>s3</parent>
+        </element>
+        <element etype="block">
+            <type>block a</type>
             <label>first</label>
             <child>s2</child>
             <child>s3</child>
@@ -29,12 +35,6 @@
             <label>s3</label>
             <parent>first</parent>
             <child>last</child>
-        </element>
-        <element etype="block">
-            <type>block a</type>
-            <label>last</label>
-            <parent>s2</parent>
-            <parent>s3</parent>
         </element>
     </chain>
 

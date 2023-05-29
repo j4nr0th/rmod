@@ -50,33 +50,85 @@ static rmod_result copy_element(const rmod_chain_element* const this, rmod_chain
 {
     RMOD_ENTER_FUNCTION;
     ptrdiff_t* new_parents, *new_children;
-    new_parents = jalloc(this->parent_count * sizeof(*new_parents));
-    if (!new_parents)
+    if (this->parent_count)
     {
-        RMOD_ERROR("Failed jalloc(%zu)",this->parent_count * sizeof(*new_parents));
-        RMOD_LEAVE_FUNCTION;
-        return RMOD_RESULT_NOMEM;
+        new_parents = jalloc(this->parent_count * sizeof(*new_parents));
+        if (!new_parents)
+        {
+            RMOD_ERROR("Failed jalloc(%zu)",this->parent_count * sizeof(*new_parents));
+            RMOD_LEAVE_FUNCTION;
+            return RMOD_RESULT_NOMEM;
+        }
     }
-    new_children = jalloc(this->parent_count * sizeof(*new_children));
-    if (!new_children)
+    else
     {
-        jfree(new_parents);
-        RMOD_ERROR("Failed jalloc(%zu)",this->parent_count * sizeof(*new_children));
-        RMOD_LEAVE_FUNCTION;
-        return RMOD_RESULT_NOMEM;
+        new_parents = NULL;
+    }
+    if (this->child_count)
+    {
+        new_children = jalloc(this->child_count * sizeof(*new_children));
+        if (!new_children)
+        {
+            jfree(new_parents);
+            RMOD_ERROR("Failed jalloc(%zu)", this->parent_count * sizeof(*new_children));
+            RMOD_LEAVE_FUNCTION;
+            return RMOD_RESULT_NOMEM;
+        }
+    }
+    else
+    {
+        new_children = NULL;
     }
     static_assert(sizeof(*dest) == sizeof(*this));
     memcpy(dest, this, sizeof(*this));
     dest->parents = new_parents;
-    memcpy(new_parents, this->parents, this->parent_count * sizeof(*new_parents));
+    if (this->parent_count)
+    {
+        memcpy(new_parents, this->parents, this->parent_count * sizeof(*new_parents));
+    }
     dest->children = new_children;
-    memcpy(new_children, this->children, this->parent_count * sizeof(*new_children));
+    if (this->child_count)
+    {
+        memcpy(new_children, this->children, this->child_count * sizeof(*new_children));
+    }
     RMOD_LEAVE_FUNCTION;
     return RMOD_RESULT_SUCCESS;
 }
 
+static inline void chain_to_absolute_relations(rmod_chain* const chain)
+{
+    for (u32 i = 0; i < chain->element_count; ++i)
+    {
+        rmod_chain_element* const this = chain->chain_elements + i;
+        for (u32 j = 0; j < this->parent_count; ++j)
+        {
+            this->parents[j] += i;
+        }
+        for (u32 j = 0; j < this->child_count; ++j)
+        {
+            this->children[j] += i;
+        }
+    }
+}
+
+static inline void chain_to_relative_relations(rmod_chain* const chain)
+{
+    for (u32 i = 0; i < chain->element_count; ++i)
+    {
+        rmod_chain_element* const this = chain->chain_elements + i;
+        for (u32 j = 0; j < this->parent_count; ++j)
+        {
+            this->parents[j] -= i;
+        }
+        for (u32 j = 0; j < this->child_count; ++j)
+        {
+            this->children[j] -= i;
+        }
+    }
+}
+
 rmod_result rmod_compile_graph(
-        u32 n_types, const rmod_element_type* p_types, const char* chain_name, const char* module_name,
+        u32 n_types, rmod_element_type* p_types, const char* chain_name, const char* module_name,
         rmod_graph* p_out)
 {
     RMOD_ENTER_FUNCTION;
@@ -342,7 +394,12 @@ rmod_result rmod_compile_graph(
     for (u32 i = 0; i < needed_count; ++i, ++built_count)
     {
         const u32 chain_to_build_index = build_order_array[i];
-        const rmod_chain* const chain = &p_types[chain_index_array[chain_to_build_index]].chain;
+        rmod_chain* const chain = &p_types[chain_index_array[chain_to_build_index]].chain;
+        if (chain->compiled)
+        {
+            //  No compilation needed
+            continue;
+        }
         assert(chain->type_header.type == RMOD_ELEMENT_TYPE_CHAIN);
         RMOD_INFO("Building chain \"%.*s\"", chain->type_header.type_name.len, chain->type_header.type_name.begin);
 
@@ -367,47 +424,236 @@ rmod_result rmod_compile_graph(
             goto failed;
             }
         }
-        if (total_element_count == chain->element_count)
-        {
-            //  Chain already only contains elements
-            continue;
-        }
 
-        rmod_chain_element* const new_element_array = jalloc(total_element_count * sizeof*new_element_array);
-        if (!new_element_array)
+        if (total_element_count != chain->element_count)
         {
-            RMOD_ERROR("Failed jalloc(%zu)", total_element_count * sizeof*new_element_array);
-            res = RMOD_RESULT_NOMEM;
-            goto failed;
-        }
-        memset(new_element_array, 0, total_element_count * sizeof*new_element_array);
-        u32 new_elements = 0, adjust_amount = 0;
-        //  First copy over all elements
-        for (u32 j = 0; j < chain->element_count; ++j)
-        {
-            const rmod_chain_element* element = chain->chain_elements + j;
-            if ((res = copy_element(element, new_element_array + j)) != RMOD_RESULT_SUCCESS)
+
+            rmod_chain_element* new_element_array = jalloc(total_element_count * sizeof*new_element_array);
+            if (!new_element_array)
             {
-                RMOD_ERROR("Failed copying an element");
-                goto failed_conversion;
+                RMOD_ERROR("Failed jalloc(%zu)", total_element_count * sizeof*new_element_array);
+                res = RMOD_RESULT_NOMEM;
+                goto failed;
             }
+            memset(new_element_array, 0, total_element_count * sizeof*new_element_array);
+            //  First copy over all elements
+            for (u32 j = 0; j < chain->element_count; ++j)
+            {
+                const rmod_chain_element* element = chain->chain_elements + j;
+                if ((res = copy_element(element, new_element_array + j)) != RMOD_RESULT_SUCCESS)
+                {
+                    RMOD_ERROR("Failed copying an element");
+                    for (u32 k = 0; k < j; ++k)
+                    {
+                        jfree(new_element_array[k].parents);
+                        jfree(new_element_array[k].children);
+                    }
+                    jfree(new_element_array);
+                    goto failed;
+                }
+            }
+            jfree(chain->chain_elements);
+            chain->chain_elements = new_element_array;
         }
 
         //  Now performa a topological sort of the elements
-
-
-        //  Lastly go through the element list and
-
-        continue;
-    failed_conversion:
-        for (u32 j = 0; j < new_elements; ++j)
+        rmod_chain_element* const sorted_array = lin_jalloc(G_LIN_JALLOCATOR, total_element_count * sizeof(*sorted_array));
+        if (!sorted_array)
         {
-            jfree(new_element_array[j].parents);
-            jfree(new_element_array[j].children);
+            RMOD_ERROR("Failed lin_jalloc(%p, %g)", G_LIN_JALLOCATOR, total_element_count * sizeof(*sorted_array));
+            res = RMOD_RESULT_NOMEM;
+            goto failed;
         }
-        jfree(new_element_array);
-        goto failed;
+        u32 left_to_sort = chain->element_count;
+
+        //  Convert parent-child relations to be absolute rather than relative
+        chain_to_absolute_relations(chain);
+        while (left_to_sort)
+        {
+            u32 found = 0;
+            //  Extract the nodes with no dependencies
+            for (u32 j = 0; j < left_to_sort; ++j)
+            {
+                if (chain->chain_elements[j].parent_count == 0)
+                {
+                    found += 1;
+                    //  Take it out of the array and move it into the queue
+                    const rmod_chain_element e = chain->chain_elements[j];
+                    sorted_array[(chain->element_count - left_to_sort)] = e;
+                    memmove(chain->chain_elements + j, chain->chain_elements + j + 1, sizeof(*chain->chain_elements) * (left_to_sort - 1 - j));
+                    memset(chain->chain_elements + left_to_sort - 1, 0, sizeof(*chain->chain_elements));
+                    left_to_sort -= 1;
+                    j -= 1;
+
+                    //  Remove dependence on this from the other chains
+                    for (u32 k = 0; k < left_to_sort; ++k)
+                    {
+                        for (u32 l = 0; l < chain->chain_elements[k].parent_count; ++l)
+                        {
+                            if (chain->chain_elements[k].parents[l] == e.id)
+                            {
+                                memmove(chain->chain_elements[k].parents + l, chain->chain_elements[k].parents + l + 1, sizeof(*chain->chain_elements[k].parents) * (chain->chain_elements[k].parent_count - 1 - l));
+                                chain->chain_elements[k].parent_count -= 1;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            //  Remove the extracted values and push them in the sorted array
+
+            //      If queue is empty, there is at least one cycle in the chain dependencies
+            if (found == 0)
+            {
+                RMOD_ERROR_CRIT("Cyclical flow for chain \"%.*s\" were found", chain->type_header.type_name.len, chain->type_header.type_name.begin);
+                //  Not really necessary, since this function calls exit
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        //  Update chain first and last indices
+        chain->i_first = 0;
+        chain->i_last = chain->element_count - 1;
+
+        memmove(chain->chain_elements, sorted_array, sizeof(*sorted_array) * chain->element_count);
+        lin_jfree(G_LIN_JALLOCATOR, sorted_array);
+        //  Adjust child references
+        u32* const ordering_array = lin_jalloc(G_LIN_JALLOCATOR, sizeof(*ordering_array) * chain->element_count);
+        assert(ordering_array);
+        //  Allocation will succeed because a bigger chunk of memory was just given back
+        for (u32 j = 0; j < chain->element_count; ++j)
+        {
+            ordering_array[j] = chain->chain_elements[j].id;
+        }
+        for (u32 j = 0; j < chain->element_count; ++j)
+        {
+            rmod_chain_element* const this = chain->chain_elements + j;
+            for (u32 k = 0; k < this->child_count; ++k)
+            {
+                for (u32 l = 0; l < chain->element_count; ++l)
+                {
+                    if (ordering_array[l] == this->children[k])
+                    {
+                        this->children[k] = l;
+                        break;
+                    }
+                }
+            }
+            this->id = j;
+        }
+
+
+        lin_jfree(G_LIN_JALLOCATOR, ordering_array);
+
+
+        //  Re-generate child relations by using child references
+        for (u32 j = 0; j < chain->element_count; ++j)
+        {
+            rmod_chain_element* const this = chain->chain_elements + j;
+            for (u32 k = 0; k < this->child_count; ++k)
+            {
+                rmod_chain_element* child = chain->chain_elements + this->children[k];
+                child->parents[child->parent_count++] = j;
+            }
+        }
+
+        //  Reset the chain to use relative offsets
+        chain_to_relative_relations(chain);
+
+        if (total_element_count != chain->element_count)
+        {
+            //  Lastly go through the element list and substitute all the chains. Since all elements contain relative ordering,
+            //  this substitution should not need any reordering. Space for all new elements was already reserved before
+            for (u32 j = 0; j < chain->element_count; ++j)
+            {
+                const rmod_chain_element* element = chain->chain_elements + j;
+                const rmod_element_type* type = p_types + element->type_id;
+                //  Not a chain, so skip
+                if (type->type.type != RMOD_ELEMENT_TYPE_CHAIN)
+                {
+                    continue;
+                }
+                const rmod_chain* sub_chain = &type->chain;
+                if (!sub_chain->compiled)
+                {
+                    RMOD_ERROR("Chain \"%.*s\" was not compiled as dependency for chain \"%.*s\"", sub_chain->type_header.type_name.len, sub_chain->type_header.type_name.begin, chain->type_header.type_name.len, chain->type_header.type_name.begin);
+                    res = RMOD_RESULT_STUPIDITY;
+                    goto failed;
+                }
+                const u32 sub_elements = sub_chain->element_count;
+                //  Save element which will be replaced
+                const rmod_chain_element e_replaced = chain->chain_elements[j];
+                //  Create a copy of elements that will be inserted
+                rmod_chain_element* const element_copy = lin_jalloc(G_LIN_JALLOCATOR, sub_elements * sizeof(*element_copy));
+                if (!element_copy)
+                {
+                    RMOD_ERROR("Failed lin_jalloc(%p, %zu)", G_LIN_JALLOCATOR, sub_elements * sizeof(*element_copy));
+                    res = RMOD_RESULT_NOMEM;
+                    goto failed;
+                }
+                for (u32 k = 0; k < sub_elements; ++k)
+                {
+                    if ((res = copy_element(sub_chain->chain_elements + k, element_copy + k)))
+                    {
+                        RMOD_ERROR("Failed copying element");
+                        for (u32 l = 0; l < k; ++l)
+                        {
+                            jfree(element_copy[l].parents);
+                            jfree(element_copy[l].children);
+                        }
+                        goto failed;
+                    }
+                    element_copy[k].label.len = 0;
+                }
+
+                //  Correct all parent-child relations of the elements proceeding and following this one
+                for (u32 k = 0; k < j; ++k)
+                {
+                    rmod_chain_element* e = chain->chain_elements + k;
+                    for (u32 l = 0; l < e->child_count; ++l)
+                    {
+                        if (e->children[l] + k > j)
+                        {
+                            e->children[l] += sub_elements - 1;
+                        }
+                    }
+                }
+                for (u32 k = j + 1; k < chain->element_count; ++k)
+                {
+                    rmod_chain_element* e = chain->chain_elements + k;
+                    for (u32 l = 0; l < e->parent_count; ++l)
+                    {
+                        if (e->parents[l] + k < j)
+                        {
+                            e->parents[l] -= sub_elements - 1;
+                        }
+                    }
+                }
+                //  Move other elements out of the way
+                memmove(chain->chain_elements + j + sub_elements, chain->chain_elements + j + 1, sizeof(*chain->chain_elements) * (chain->element_count - j - 1));
+                assert(element_copy[0].parent_count == 0);
+                element_copy[0].parent_count = e_replaced.parent_count;
+                element_copy[0].parents = e_replaced.parents;
+                assert(element_copy[sub_elements - 1].child_count == 0);
+                element_copy[sub_elements - 1].child_count = e_replaced.child_count;
+                element_copy[sub_elements - 1].children = e_replaced.children;
+                //  Copy the memory from the copy_array now that there's space for them
+                memcpy(chain->chain_elements + j, element_copy, sizeof(*element_copy) * sub_elements);
+                lin_jfree(G_LIN_JALLOCATOR, element_copy);
+                chain->element_count += sub_elements - 1;
+                j += sub_elements - 1;
+
+                //  Move loop index forward
+            }
+        }
+
+        chain->i_first = 0;
+        chain->i_last = chain->element_count - 1;
+        chain->compiled = true;
     }
+
+
 
     lin_jfree(G_LIN_JALLOCATOR, chain_name_buffer);
     lin_jfree(G_LIN_JALLOCATOR, chain_build_array);
@@ -416,12 +662,6 @@ rmod_result rmod_compile_graph(
 
     RMOD_LEAVE_FUNCTION;
     return RMOD_RESULT_SUCCESS;
-//free_failed:
-//    for (u32 i = 0; i < built_count; ++i)
-//    {
-//        jfree(chain_build_array[i].node_list);
-//        jfree(chain_build_array[i].type_list);
-//    }
 
 failed:
     lin_jalloc_set_current(G_LIN_JALLOCATOR, base_lin_alloc);

@@ -59,6 +59,7 @@ typedef struct rmod_chain_element_struct rmod_chain_element;
 struct rmod_chain_element_struct
 {
     element_type_id type_id;
+    u32 id;
     string_segment label;
     u32 parent_count;
     ptrdiff_t* parents;
@@ -74,6 +75,7 @@ struct rmod_chain_struct
     u32 i_first;
     u32 i_last;
     rmod_chain_element* chain_elements;
+    bool compiled;
 };
 
 typedef union rmod_element_type_union rmod_element_type;

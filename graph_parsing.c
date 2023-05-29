@@ -1436,6 +1436,7 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
 
                 out->label = *this->label;
                 out->type_id = this->type_id;
+                out->id = j;
             }
             //  Ensure that there is correspondence between children and parents
             for (u32 j = 0; j < chain_element_count; ++j)
@@ -1542,6 +1543,7 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                                             .element_count = chain_element_count,
                                             .i_first = first_v,
                                             .i_last = last_v,
+                                            .compiled = false,
                                     }
                     };
         }
@@ -1633,17 +1635,33 @@ rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const r
             ADD_STRING_LITERAL("\t\t<first>");
             {
                 const rmod_chain_element* first = this->chain_elements + this->i_first;
-                ENSURE_BUFFER_SPACE(first->label.len);
-                memcpy(buffer + usage, first->label.begin, first->label.len);
-                usage += first->label.len;
+                if (first->label.len)
+                {
+                    ADD_STRING_SEGMENT(first->label);
+                }
+                else
+                {
+                    ADD_STRING_LITERAL("BLOCK-");
+                    u32 len = snprintf(NULL, 0, "%03i", this->i_first);
+                    ENSURE_BUFFER_SPACE(len);
+                    usage += sprintf(buffer + usage, "%03i", this->i_first);
+                }
             }
             ADD_STRING_LITERAL("</first>\n");
             ADD_STRING_LITERAL("\t\t<last>");
             {
                 const rmod_chain_element* last = this->chain_elements + this->i_last;
-                ENSURE_BUFFER_SPACE(last->label.len);
-                memcpy(buffer + usage, last->label.begin, last->label.len);
-                usage += last->label.len;
+                if (last->label.len)
+                {
+                    ADD_STRING_SEGMENT(last->label);
+                }
+                else
+                {
+                    ADD_STRING_LITERAL("BLOCK-");
+                    u32 len = snprintf(NULL, 0, "%03i", this->i_last);
+                    ENSURE_BUFFER_SPACE(len);
+                    usage += sprintf(buffer + usage, "%03i", this->i_last);
+                }
             }
             ADD_STRING_LITERAL("</last>\n");
 
@@ -1671,20 +1689,50 @@ rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const r
                 ADD_STRING_LITERAL("</type>\n");
 
                 ADD_STRING_LITERAL("\t\t\t<label>");
-                ADD_STRING_SEGMENT(e->label);
+                if (e->label.len)
+                {
+                    ADD_STRING_SEGMENT(e->label);
+                }
+                else
+                {
+                    ADD_STRING_LITERAL("BLOCK-");
+                    u32 len = snprintf(NULL, 0, "%03i", i);
+                    ENSURE_BUFFER_SPACE(len);
+                    usage += sprintf(buffer + usage, "%03i", i);
+                }
                 ADD_STRING_LITERAL("</label>\n");
 
                 for (u32 j = 0; j < e->parent_count; ++j)
                 {
                     ADD_STRING_LITERAL("\t\t\t<parent>");
-                    ADD_STRING_SEGMENT((e + e->parents[j])->label);
+                    if ((e + e->parents[j])->label.len)
+                    {
+                        ADD_STRING_SEGMENT((e + e->parents[j])->label);
+                    }
+                    else
+                    {
+                        ADD_STRING_LITERAL("BLOCK-");
+                        u32 len = snprintf(NULL, 0, "%03ji", i + e->parents[j]);
+                        ENSURE_BUFFER_SPACE(len);
+                        usage += sprintf(buffer + usage, "%03ji", i + e->parents[j]);
+                    }
                     ADD_STRING_LITERAL("</parent>\n");
                 }
 
                 for (u32 j = 0; j < e->child_count; ++j)
                 {
                     ADD_STRING_LITERAL("\t\t\t<child>");
-                    ADD_STRING_SEGMENT((e + e->children[j])->label);
+                    if ((e + e->children[j])->label.len)
+                    {
+                        ADD_STRING_SEGMENT((e + e->children[j])->label);
+                    }
+                    else
+                    {
+                        ADD_STRING_LITERAL("BLOCK-");
+                        u32 len = snprintf(NULL, 0, "%03ji", i + e->children[j]);
+                        ENSURE_BUFFER_SPACE(len);
+                        usage += sprintf(buffer + usage, "%03ji", i + e->children[j]);
+                    }
                     ADD_STRING_LITERAL("</child>\n");
                 }
 

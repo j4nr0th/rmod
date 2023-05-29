@@ -13,9 +13,9 @@ struct rmod_graph_node_struct
 {
     rmod_graph_type_id type_id;
     u32 child_count;
-    u32* children;
+    rmod_graph_node_id* children;
     u32 parent_count;
-    u32* parents;
+    rmod_graph_node_id* parents;
 };
 typedef struct rmod_graph_node_type_struct rmod_graph_node_type;
 struct rmod_graph_node_type_struct

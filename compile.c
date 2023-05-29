@@ -156,6 +156,12 @@ rmod_result rmod_compile_graph(
         res = RMOD_RESULT_BAD_CHAIN_NAME;
         goto failed;
     }
+    if (n_types == chain_count)
+    {
+        RMOD_ERROR("All types passed were chains. HOW IN GOD'S NAME DO YOU EXPECT TO BUILD A RELIABILITY BLOCK DIAGRAM WITH NO BLOCKS!?");
+        res = RMOD_RESULT_STUPIDITY;
+        goto failed;
+    }
 
     //  Build chain hierarchy and ensure there are no cycles
     u32* chain_index_array = lin_jalloc(G_LIN_JALLOCATOR, sizeof(*chain_index_array) * chain_count);
@@ -371,23 +377,7 @@ rmod_result rmod_compile_graph(
 
     //  chain_index_array has the indices of the chains within the p_types
     //  build_order_array has the order in which the chains have to be built (0 corresponding to the first element in chain_index_array)
-    //  chain_build_array has space where built chains can be inserted into
 
-    rmod_graph* const chain_build_array  = lin_jalloc(G_LIN_JALLOCATOR, sizeof(*chain_build_array) * needed_count);
-    if (!chain_build_array)
-    {
-        RMOD_ERROR("Failed lin_jalloc(%p, %zu)", G_LIN_JALLOCATOR, sizeof(*chain_build_array) * chain_count);
-        res = RMOD_RESULT_NOMEM;
-        goto failed;
-    }
-    c8* const chain_name_buffer = lin_jalloc(G_LIN_JALLOCATOR, total_chain_name_memory);
-    if (!chain_name_buffer)
-    {
-        RMOD_ERROR("Failed lin_jalloc(%p, %zu)", G_LIN_JALLOCATOR, total_chain_name_memory);
-        res = RMOD_RESULT_NOMEM;
-        goto failed;
-    }
-    u32 name_usage = 0;
 
     //  Compile chains based on their topological ordering (nice fancy words)
     u32 built_count = 0;
@@ -653,18 +643,199 @@ rmod_result rmod_compile_graph(
         chain->compiled = true;
     }
 
-
-
-    lin_jfree(G_LIN_JALLOCATOR, chain_name_buffer);
-    lin_jfree(G_LIN_JALLOCATOR, chain_build_array);
     lin_jfree(G_LIN_JALLOCATOR, build_order_array);
     lin_jfree(G_LIN_JALLOCATOR, chain_index_array);
 
+    //  Chain compilation is complete. Now the target is compiled.
+    assert(target_chain->compiled);
+    //  Now convert the chain into a graph
+    rmod_graph_node_type* const type_array = jalloc(sizeof*type_array * (n_types - chain_count));
+    if (!type_array)
+    {
+        RMOD_ERROR("Failed jalloc(%zu)", sizeof*type_array * (n_types - chain_count));
+        res = RMOD_RESULT_NOMEM;
+        goto failed;
+    }
+    u32 unique_types = 0;
+
+    rmod_graph this;
+    memset(&this, 0xCC, sizeof(this));
+    this.node_count = target_chain->element_count;
+    this.node_list = jalloc(this.node_count * sizeof*this.node_list);
+    if (!this.node_list)
+    {
+        RMOD_ERROR("Failed jalloc(%zu)", this.node_count * sizeof*this.node_list);
+        res = RMOD_RESULT_NOMEM;
+        goto failed;
+    }
+    u32 i;
+    for (i = 0; i < target_chain->element_count; ++i)
+    {
+        const rmod_chain_element* const element = target_chain->chain_elements + i;
+        const rmod_element_type* const type = p_types + element->type_id;
+        if (type->type.type != RMOD_ELEMENT_TYPE_BLOCK)
+        {
+            RMOD_ERROR("Converting element \"%*.s\" - BLOCK-%03i was not possible because its type was not block. This should have not have happened, since chain was marked as compiled.");
+            res = RMOD_RESULT_STUPIDITY;
+            goto free_failed;
+        }
+        //  Add the node's type if needed
+        const rmod_block* const block_type = &type->block;
+        u32 type_index;
+        for (type_index = 0; type_index < unique_types; ++type_index)
+        {
+            if (strncmp((const char*)type_array[type_index].name, block_type->type_header.type_name.begin, block_type->type_header.type_name.len) == 0)
+            {
+                //  Was already put in there
+                break;
+            }
+        }
+        if (type_index == unique_types)
+        {
+            //  Add it in the array
+            c8* name_buffer = jalloc(block_type->type_header.type_name.len + 1);
+            if (!name_buffer)
+            {
+                RMOD_ERROR("Failed jalloc(%zu)", block_type->type_header.type_name.len + 1);
+                res = RMOD_RESULT_NOMEM;
+                goto free_failed;
+            }
+            memcpy(name_buffer, block_type->type_header.type_name.begin, block_type->type_header.type_name.len);
+            name_buffer[block_type->type_header.type_name.len] = 0;
+            type_array[unique_types].name = name_buffer;
+            type_array[unique_types].failure_type = block_type->failure_type;
+            type_array[unique_types].reliability = block_type->reliability;
+            type_array[unique_types].effect = block_type->effect;
+            unique_types += 1;
+            assert(unique_types <= n_types - chain_count);
+        }
+
+        //  Add the node itself
+        rmod_graph_node_id* parents, *children;
+        if (element->parent_count)
+        {
+            parents = jalloc(sizeof*parents * element->parent_count);
+            if (!parents)
+            {
+                RMOD_ERROR("Failed jalloc(%zu)", sizeof*parents * element->parent_count);
+                res = RMOD_RESULT_NOMEM;
+                goto free_failed;
+            }
+            //  Convert parent indices to use absolute values, rather than relative
+            for (u32 k = 0; k < element->parent_count; ++k)
+            {
+                assert(element->parents[k] + i >= 0);
+                parents[k] = (element_type_id)(element->parents[k] + i);
+            }
+        }
+        else
+        {
+            parents = NULL;
+        }
+
+        if (element->child_count)
+        {
+            children = jalloc(sizeof*children * element->child_count);
+            if (!children)
+            {
+                RMOD_ERROR("Failed jalloc(%zu)", sizeof*children * element->child_count);
+                res = RMOD_RESULT_NOMEM;
+                goto free_failed;
+            }
+            //  Convert child indices to use absolute values, rather than relative
+            for (u32 k = 0; k < element->child_count; ++k)
+            {
+                assert(element->children[k] + i > 0);
+                children[k] = (element_type_id)(element->children[k] + i);
+            }
+        }
+        else
+        {
+            children = NULL;
+        }
+
+        this.node_list[i].type_id = type_index;
+        this.node_list[i].parents = parents;
+        this.node_list[i].parent_count = element->parent_count;
+        this.node_list[i].children = children;
+        this.node_list[i].child_count = element->child_count;
+    }
+
+    this.type_count = unique_types;
+    this.type_list = jrealloc(type_array, unique_types * sizeof(*type_array));
+    if (!this.type_list)
+    {
+        RMOD_WARN("Failed jrealloc(%p, %zu), but not critical since array was bigger than needed", type_array, unique_types * sizeof(*type_array));
+        this.type_list = type_array;
+    }
+
+    *p_out = this;
+
+    const u64 len_module_name = strlen(module_name);
+    c8* const module_copy = jalloc(len_module_name + 1);
+    if (!module_name)
+    {
+        RMOD_WARN("Failed jalloc(%zu), but not critical because it was for a name string", len_module_name + 1);
+    }
+    else
+    {
+        memcpy(module_copy, module_name, len_module_name + 1);
+    }
+    p_out->module_name = module_copy;
+
+    c8* const name_copy = jalloc(target_chain->type_header.type_name.len + 1);
+    if (!name_copy)
+    {
+        RMOD_WARN("Failed jalloc(%zu), but not critical because it was for a name string", target_chain->type_header.type_name.len + 1);
+    }
+    else
+    {
+        memcpy(name_copy, target_chain->type_header.type_name.begin, target_chain->type_header.type_name.len + 1);
+    }
+    p_out->graph_type = name_copy;
+
+
     RMOD_LEAVE_FUNCTION;
     return RMOD_RESULT_SUCCESS;
+free_failed:
 
+    for (u32 k = 0; k < unique_types; ++k)
+    {
+        jfree(type_array[k].name);
+    }
+    for (u32 k = 0; k < i; ++k)
+    {
+        jfree(this.node_list[k].children);
+        jfree(this.node_list[k].parents);
+    }
+    jfree(this.node_list);
 failed:
+    //  Reset linear allocator
     lin_jalloc_set_current(G_LIN_JALLOCATOR, base_lin_alloc);
     RMOD_LEAVE_FUNCTION;
     return res;
+}
+
+rmod_result rmod_destroy_graph(rmod_graph* graph)
+{
+    RMOD_ENTER_FUNCTION;
+
+    for (u32 i = 0; i < graph->node_count; ++i)
+    {
+        jfree(graph->node_list[i].children);
+        jfree(graph->node_list[i].parents);
+    }
+    jfree(graph->node_list);
+
+    for (u32 i = 0; i < graph->type_count; ++i)
+    {
+        jfree(graph->type_list[i].name);
+    }
+    jfree(graph->type_list);
+
+    jfree(graph->graph_type);
+    jfree(graph->module_name);
+
+    RMOD_LEAVE_FUNCTION;
+    return RMOD_RESULT_SUCCESS;
 }

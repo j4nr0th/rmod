@@ -102,8 +102,9 @@ int main()
 //    rmod_destroy_graph(&graph_a);
 
     rmod_destroy_types(n_types, p_types);
-
     free(memory);
+
+    rmod_destroy_graph(&graph_a);
 
     {
         jallocator* const jallocator = G_JALLOCATOR;

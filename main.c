@@ -65,7 +65,7 @@ int main()
     u32 n_types;
     rmod_element_type* p_types;
 
-    FILE* example_file = fopen("../input/example.xml", "r");
+    FILE* example_file = fopen("../input/chain_dependence_test.xml", "r");
     if (!example_file)
     {
         RMOD_ERROR_CRIT("Could not open file, reason: %s", RMOD_ERRNO_MESSAGE);

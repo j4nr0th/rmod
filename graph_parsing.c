@@ -907,9 +907,10 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
             assert(part_count == 0);
             //  This is a chain type definition
             bool found_name = false, found_first = false, found_last = false;
-            const string_segment* name_ptr;
-            const string_segment* str_first;
-            const string_segment* str_last;
+            const string_segment* name_ptr = NULL;
+            const string_segment* str_first = NULL;
+            const string_segment* str_last = NULL;
+            memset(element_buffer, 0xCC, sizeof(*element_buffer) * part_capacity);
             u32 first_v = -1, last_v = -1;
             //  Process attributes
             for (u32 k = 0; k < e->attrib_count; ++k)
@@ -1083,6 +1084,7 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                     }
 
                     intermediate_element* const this = element_buffer + (part_count++);
+                    memset(this, 0, sizeof(*this));
                     //  process children of "element"
                     for (u32 k = 0; k < child->child_count; ++k)
                     {
@@ -1105,7 +1107,7 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                             for (u32 l = 0; l < type_count && !found_type; ++l)
                             {
                                 const rmod_element_type* type = types + l;
-                                if (types->type.type != type_v)
+                                if (type->type.type != type_v)
                                 {
                                     continue;
                                 }
@@ -1119,7 +1121,7 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                                     }
                                     break;
                                 case RMOD_ELEMENT_TYPE_CHAIN:
-                                    if (compare_string_segments(&type->type.type_name, &component->value) == 0)
+                                    if (compare_string_segments(&type->type.type_name, &component->value))
                                     {
                                         type_id = l;
                                         found_type = true;
@@ -1132,7 +1134,12 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                                 }
                             }
 
-                            found_type = true;
+                            if (!found_type)
+                            {
+                                RMOD_ERROR("%s of type \"%.*s\" is not defined", type_v == RMOD_ELEMENT_TYPE_CHAIN ? "Chain" : "Block", component->value.len, component->value.begin);
+                                res = RMOD_RESULT_BAD_XML;
+                                goto failed;
+                            }
                         }
                         else if (COMPARE_XML_TO_LITERAL(label, &component->name))
                         {
@@ -1365,7 +1372,6 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                     }
                     out->parents = parents;
                     out->parent_count = this->parent_count;
-                    jfree(this->parent_names);
                 }
                 else
                 {
@@ -1414,7 +1420,6 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                     }
                     out->children = children;
                     out->child_count = this->child_count;
-                    jfree(this->child_names);
                 }
                 else
                 {
@@ -1486,6 +1491,13 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                 jfree(chain_elements);
                 goto failed;
             }
+
+            //  Free the child and parent arrays
+            for (u32 j = 0; j < part_count; ++j)
+            {
+                jfree(element_buffer[j].child_names);
+                jfree(element_buffer[j].parent_names);
+            }
             part_count = 0;
 
             //  Chain was now parsed insert it into the type array
@@ -1504,6 +1516,8 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                 types = new_ptr;
                 type_capacity = new_capacity;
             }
+
+
             types[type_count++] = (rmod_element_type)
                     {
                             .chain =

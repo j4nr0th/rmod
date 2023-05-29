@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rmod>
+    <block>
+        <name>block a</name>
+        <reliability>0.96</reliability>
+        <effect>3.14</effect>
+        <failure>normal</failure>
+    </block>
+
+    <chain>
+        <name>chain D</name>
+        <first>first</first>
+        <last>last</last>
+
+        <element etype="block">
+            <type>block a</type>
+            <label>first</label>
+            <child>s2</child>
+            <child>s3</child>
+        </element>
+        <element etype="block">
+            <type>block a</type>
+            <label>s2</label>
+            <parent>first</parent>
+            <child>last</child>
+        </element>
+        <element etype="block">
+            <type>block a</type>
+            <label>s3</label>
+            <parent>first</parent>
+            <child>last</child>
+        </element>
+        <element etype="block">
+            <type>block a</type>
+            <label>last</label>
+            <parent>s2</parent>
+            <parent>s3</parent>
+        </element>
+    </chain>
+
+    <chain>
+        <name>chain E</name>
+        <first>first</first>
+        <last>last</last>
+
+        <element etype="block">
+            <type>block a</type>
+            <label>first</label>
+            <child>s2</child>
+            <child>s3</child>
+            <child>s4</child>
+        </element>
+        <element etype="block">
+            <type>block a</type>
+            <label>s2</label>
+            <parent>first</parent>
+            <child>last</child>
+        </element>
+        <element etype="block">
+            <type>block a</type>
+            <label>s3</label>
+            <parent>first</parent>
+            <child>last</child>
+        </element>
+        <element etype="block">
+            <type>block a</type>
+            <label>s4</label>
+            <parent>first</parent>
+            <child>last</child>
+        </element>
+        <element etype="block">
+            <type>block a</type>
+            <label>last</label>
+            <parent>s2</parent>
+            <parent>s3</parent>
+            <parent>s4</parent>
+        </element>
+    </chain>
+
+    <chain>
+        <name>chain C</name>
+        <first>only</first>
+        <last>only</last>
+
+        <element etype="block">
+            <type>block a</type>
+            <label>only</label>
+        </element>
+    </chain>
+
+    <chain>
+        <name>chain B</name>
+        <first>one</first>
+        <last>two</last>
+
+        <element etype="chain">
+            <type>chain D</type>
+            <label>one</label>
+            <child>two</child>
+        </element>
+        <element etype="chain">
+            <type>chain E</type>
+            <label>two</label>
+            <parent>one</parent>
+        </element>
+    </chain>
+
+    <chain>
+        <name>chain A</name>
+        <first>head</first>
+        <last>tail</last>
+
+        <element etype="block">
+            <type>block a</type>
+            <label>head</label>
+            <child>c1</child>
+            <child>c2</child>
+        </element>
+
+        <element etype="block">
+            <type>block a</type>
+            <label>tail</label>
+            <parent>c1</parent>
+            <parent>c2</parent>
+        </element>
+
+        <element etype="chain">
+            <type>chain B</type>
+            <label>c1</label>
+            <parent>head</parent>
+            <child>tail</child>
+        </element>
+        <element etype="chain">
+            <type>chain C</type>
+            <label>c2</label>
+            <parent>head</parent>
+            <child>tail</child>
+        </element>
+    </chain>
+</rmod>

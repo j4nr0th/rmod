@@ -144,7 +144,7 @@ rmod_result rmod_compile_graph(
                 continue;
             }
             chain_dependency_info* const info = dependency_info_list + j;
-            info->index = i;
+            info->index = j;
             info->dependency_count = 0;
             info->dependency_list = joined_dependency_array + chain_count * j;
 
@@ -189,60 +189,108 @@ rmod_result rmod_compile_graph(
         }
 
         //  Extract the dependencies needed by the target chain
-
-
-
-        //  Check dependencies for cycles
-        if ((res = check_for_cycles(chain_count, dependency_info_list, chain_idx, 0, chain_count)) !=
-            RMOD_RESULT_SUCCESS)
+        chain_dependency_info* const needed_dependencies = lin_jalloc(G_LIN_JALLOCATOR, sizeof(*needed_dependencies) * chain_count);
+        if (!needed_dependencies)
         {
-            RMOD_ERROR("Chain \"%s\" has cyclic dependencies", chain_name);
-            goto failed;
-        }
-
-        u32* dependency_count_list = lin_jalloc(G_LIN_JALLOCATOR, sizeof *dependency_count_list * chain_count);
-        if (!dependency_count_list)
-        {
-            RMOD_ERROR("Failed lin_jalloc(%p, %zu)", G_LIN_JALLOCATOR, sizeof *dependency_count_list * chain_count);
+            RMOD_ERROR("Failed lin_jalloc(%p, %zu)", G_LIN_JALLOCATOR, sizeof(*needed_dependencies) * chain_count);
             res = RMOD_RESULT_NOMEM;
             goto failed;
         }
-        memset(dependency_count_list, 0, sizeof *dependency_count_list * chain_count);
-
-        //  descend through the dependency tree and count the number of direct dependents
-        compute_dependants_counts(dependency_info_list, chain_idx, dependency_count_list);
-        //  order chains based on the order of least dependencies to most dependencies to build from
-        //  note literally just learned that this is known as a topological sort
-        //  use insertion "sort" to create the chain compilation order
-
-        for (u32 i = 0; i < chain_count; ++i)
+        u32* const queue = lin_jalloc(G_LIN_JALLOCATOR, sizeof*queue * chain_count);
+        if (!queue)
         {
-            build_order_array[i] = i;
+            RMOD_ERROR("Failed lin_jalloc(%p, %zu)", G_LIN_JALLOCATOR, sizeof(*queue) * chain_count);
+            res = RMOD_RESULT_NOMEM;
+            goto failed;
         }
-        for (u32 i = 0; i < chain_count - 1; ++i)
+        u32 queue_start = 0;
+        u32 queue_count = 0;
+
+
+        u32 needed_count = 1;
+        needed_dependencies[0] = dependency_info_list[chain_idx];
+        for (u32 i = 0; i < needed_count; ++i)
         {
-            if (dependency_count_list[build_order_array[i]] > dependency_count_list[build_order_array[i + 1]])
+            assert(i < chain_count);
+            //  For each chain in the needed array check whether all of its dependencies are already
+            //  in the array and add them if not
+            for (u32 j = 0; j < needed_dependencies[i].dependency_count; ++j)
             {
-                const u32 temp = build_order_array[i];
-                build_order_array[i] = build_order_array[i + 1];
-                build_order_array[i + 1] = temp;
-                i = 0;
+                const u32 dependency = needed_dependencies->dependency_list[j];
+                u32 k;
+                for (k = 0; k < needed_count; ++k)
+                {
+                    if (dependency == needed_dependencies[k].index)
+                    {
+                        break;
+                    }
+                }
+                if (k == needed_count)
+                {
+                    needed_dependencies[k] = dependency_info_list[k];
+                    needed_count += 1;
+                }
             }
         }
 
-        //  Check that the array is indeed sorted
-        for (u32 i = 0; i < chain_count - 1; ++i)
+        //  Now all the actually needed dependencies reside in the needed_dependencies array with the length of
+        //  needed_count. Next step is performing a topological sort of the array.
+        u32 left_to_sort = needed_count;
+        u32 sorted_count = 0;
+        while (left_to_sort)
         {
-            if (dependency_count_list[build_order_array[i]] > dependency_count_list[build_order_array[i + 1]])
+            //  Extract the nodes with no dependencies
+            for (u32 i = 0; i < left_to_sort; ++i)
             {
-                RMOD_ERROR("Autism has prevented me from properly sorting a short array using the simplest algorithm I thought of in like a minute. Shame on me.");
-                res = RMOD_RESULT_ERROR;
-                assert(dependency_count_list[build_order_array[i]] <= dependency_count_list[build_order_array[i + 1]]);
+                if (needed_dependencies[i].dependency_count == 0)
+                {
+                    //  Take it out of the array and move it into the queue
+                    u32 idx = needed_dependencies[i].index;
+                    queue[queue_start + queue_count++] = idx;
+                    memmove(needed_dependencies + i, needed_dependencies + i + 1, sizeof(*needed_dependencies) * (left_to_sort - 1 - i));
+                    memset(needed_dependencies + left_to_sort, 0, sizeof(*needed_dependencies));
+                    left_to_sort -= 1;
+                    i -= 1;
+
+                    //  Remove dependence on this from the other chains
+                    for (u32 j = 0; j < left_to_sort; ++j)
+                    {
+                        for (u32 k = 0; k < needed_dependencies[j].dependency_count; ++k)
+                        {
+                            if (needed_dependencies[j].dependency_list[k] == idx)
+                            {
+                                memmove(needed_dependencies[j].dependency_list + k, needed_dependencies[j].dependency_list + k + 1, sizeof(*needed_dependencies[j].dependency_list) * (needed_dependencies[j].dependency_count - 1 - k));
+                                needed_dependencies[j].dependency_count -= 1;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            //  Remove the extracted values and push them in the sorted array
+
+            //      If queue is empty, there is at least one cycle in the chain dependencies
+            if (queue_count == 0)
+            {
+                RMOD_ERROR("Cyclical dependencies for chain \"%s\" were found");
+                res = RMOD_RESULT_CYCLICAL_CHAIN_DEPENDENCY;
                 goto failed;
             }
+
+            for (u32 i = 0; i < queue_count; ++i)
+            {
+                build_order_array[sorted_count++] = queue[queue_start + i];
+            }
+            queue_count = 0;
+
+            assert(sorted_count + left_to_sort == needed_count);
         }
 
-        lin_jfree(G_LIN_JALLOCATOR, dependency_count_list);
+
+
+        lin_jfree(G_LIN_JALLOCATOR, queue);
+        lin_jfree(G_LIN_JALLOCATOR, needed_dependencies);
         lin_jfree(G_LIN_JALLOCATOR, joined_dependency_array);
         lin_jfree(G_LIN_JALLOCATOR, dependency_info_list);
     }

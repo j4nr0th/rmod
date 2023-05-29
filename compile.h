@@ -33,7 +33,9 @@ struct rmod_graph_struct
 };
 
 
-rmod_result rmod_compile_graph(u32 n_types, const rmod_element_type* p_types, const char* chain_name, rmod_graph* p_out);
+rmod_result rmod_compile_graph(
+        u32 n_types, const rmod_element_type* p_types, const char* chain_name, const char* module_name,
+        rmod_graph* p_out);
 
 rmod_result rmod_destroy_graph(rmod_graph* graph);
 

@@ -4,8 +4,6 @@
 
 #include "graph_parsing.h"
 
-#define EXPECT_CHARACTER(expected, real) if ((expected) != (real)) {res = RMOD_RESULT_BAD_XML; RMOD_ERROR("Expected character '%c' (%#X), but found '%c' (%#X) instead", (expected), (expected), (real), (real)); goto failure;}
-
 static const char WHITESPACE[] = {
         0x20,   //  this is ' '
         0x9,    //  this is '\t'
@@ -17,8 +15,6 @@ static bool is_whitespace(c8 c)
 {
     return !(c != WHITESPACE[0] && c != WHITESPACE[1] && c != WHITESPACE[2] && c != WHITESPACE[3]);
 }
-
-#define EXPECT_SPACE(real) if (!is_whitespace) {res = RMOD_RESULT_BAD_XML; RMOD_ERROR("Expected a whitespace character, but found '%c' (%#X) instead", (real), (real)); goto failure;}
 
 #define IS_IN_RANGE(v, btm, top) ((v) >= (btm) && (v) <= (top))
 
@@ -173,58 +169,6 @@ static inline bool parse_utf8_to_utf32(u64 max_chars, const u8* ptr, u64* p_leng
     return true;
 }
 
-static rmod_result expect_string(const u64 expected_size, const char* expected, u64* p_pos, const u64 max_length, const char* xml)
-{
-    if (expected_size > max_length)
-    {
-        goto failed;
-    }
-    if (strncmp(expected, xml + *p_pos, max_length > expected_size ? expected_size : max_length) != 0)
-    {
-        goto failed;
-    }
-
-    *p_pos += expected_size;
-    return RMOD_RESULT_SUCCESS;
-    failed:;
-    char buffer[32];
-    u64 size_left = max_length - *p_pos;
-    snprintf(buffer, sizeof(buffer) > size_left ? size_left : sizeof(buffer), "%s", xml + *p_pos);
-    RMOD_ERROR("Expected to find \"%s\", found only \"%s\"", expected, buffer);
-    return RMOD_RESULT_BAD_XML;
-}
-
-static bool compare_string(const u64 expected_size, const char* expected, u64* p_pos, const u64 max_length, const char* xml)
-{
-    if (expected_size > max_length)
-    {
-        return false;
-    }
-    if (strncmp(expected, xml + *p_pos, max_length > expected_size ? expected_size : max_length) != 0)
-    {
-        return false;
-    }
-
-    *p_pos += expected_size;
-    return true;
-}
-
-#define EXPECT_STRING_LITERAL(expect, p_pos, max_length, xml) expect_string(sizeof(expect) - 1, expect, (p_pos), (max_length), (xml))
-#define COMPARE_STRING_LITERAL(expect, p_pos, max_length, xml) compare_string(sizeof(expect) - 1, expect, (p_pos), (max_length), (xml))
-
-static rmod_result skip_whitespace(const u64 length, const char* xml, u64* const p_pos)
-{
-    while (is_whitespace(xml[*p_pos]))
-    {
-        *p_pos += 1;
-        if (*p_pos == length)
-        {
-            return RMOD_RESULT_BAD_XML;
-        }
-    }
-    return RMOD_RESULT_SUCCESS;
-}
-
 static u32 count_new_lines(u32 length, const char* str)
 {
     u64 i, c;
@@ -235,49 +179,16 @@ static u32 count_new_lines(u32 length, const char* str)
     return c;
 }
 
-static rmod_result search_for_char(char c, u64 max_len, const char* str, u64* p_dist)
-{
-    for (u32 i = 0; i < max_len; ++i)
-    {
-        if (str[i] == c)
-        {
-            *p_dist = i;
-            return RMOD_RESULT_SUCCESS;
-        }
-    }
-    RMOD_ERROR("Could not find expected character '%c'", c);
-    return RMOD_RESULT_BAD_XML;
-}
-
-static rmod_result identify_failure_type(char* str, rmod_failure_type* p_type)
-{
-    static const char* const failure_types[] =
-            {
-            [RMOD_FAILURE_TYPE_ACCEPTABLE] = "normal",
-            [RMOD_FAILURE_TYPE_CRITICAL] = "critical",
-            [RMOD_FAILURE_TYPE_FATAL] = "fatal",
-            };
-    for (rmod_failure_type type = RMOD_FAILURE_TYPE_NONE + 1; type < RMOD_FAILURE_TYPE_COUNT; ++type)
-    {
-        if (failure_types[type] && (strcasecmp(str, failure_types[type]) == 0))
-        {
-            *p_type = type;
-            return RMOD_RESULT_SUCCESS;
-        }
-    }
-    return RMOD_RESULT_BAD_XML;
-}
-
 const char* rmod_failure_type_to_str(rmod_failure_type value)
 {
     if (value < 0 || value >= RMOD_FAILURE_TYPE_COUNT)
         return NULL;
     static const char* const name_array[RMOD_FAILURE_TYPE_COUNT] =
             {
-            [RMOD_FAILURE_TYPE_NONE] = "RMOD_FAILURE_TYPE_NONE",
-            [RMOD_FAILURE_TYPE_ACCEPTABLE] = "RMOD_FAILURE_TYPE_ACCEPTABLE",
-            [RMOD_FAILURE_TYPE_CRITICAL] = "RMOD_FAILURE_TYPE_CRITICAL",
-            [RMOD_FAILURE_TYPE_FATAL] = "RMOD_FAILURE_TYPE_FATAL",
+                    [RMOD_FAILURE_TYPE_NONE] = "RMOD_FAILURE_TYPE_NONE",
+                    [RMOD_FAILURE_TYPE_ACCEPTABLE] = "RMOD_FAILURE_TYPE_ACCEPTABLE",
+                    [RMOD_FAILURE_TYPE_CRITICAL] = "RMOD_FAILURE_TYPE_CRITICAL",
+                    [RMOD_FAILURE_TYPE_FATAL] = "RMOD_FAILURE_TYPE_FATAL",
             };
     return name_array[value];
 }
@@ -308,11 +219,6 @@ rmod_result rmod_release_xml(xml_element* root)
     memset(root, 0, sizeof*root);
     RMOD_LEAVE_FUNCTION;
     return RMOD_RESULT_WAS_NULL;
-}
-
-static void print_string_segment(const string_segment* segment)
-{
-    printf("%.*s\n", segment->len, segment->begin);
 }
 
 static bool parse_name_from_string(const u64 max_len, const char* const str, string_segment* out)
@@ -757,6 +663,27 @@ static rmod_result confirm_unique_labels(const intermediate_element* parts, cons
     return res;
 }
 
+static rmod_result check_flow(const string_segment* p_name, const rmod_chain_element* elements, const u32 element_id, const u32 depth, const u32 max_depth)
+{
+    if (depth > max_depth)
+    {
+        RMOD_ERROR("Cycle detected in chain \"%.*s\"", p_name->len, p_name->begin);
+        return RMOD_RESULT_CYCLICAL_CHAIN;
+    }
+
+    const rmod_chain_element* e = elements + element_id;
+    for (u32 i = 0; i < e->child_count; ++i)
+    {
+        rmod_result res = check_flow(p_name, elements, e->children[i], depth + 1, max_depth);
+        if (res != RMOD_RESULT_SUCCESS)
+        {
+            return res;
+        }
+    }
+
+    return RMOD_RESULT_SUCCESS;
+}
+
 rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_element_type** pp_types)
 {
     RMOD_ENTER_FUNCTION;
@@ -945,7 +872,7 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
             {
                 if (compare_string_segments(&types[j].type.type_name, &name_v))
                 {
-                    RMOD_ERROR("Block/chain type \"%*.s\" was already defined", name_v.len, name_v.begin);
+                    RMOD_ERROR("Block/chain type \"%.*s\" was already defined", name_v.len, name_v.begin);
                     goto failed;
                 }
             }
@@ -1339,7 +1266,7 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
             {
                 if (compare_string_segments(&types[j].type.type_name, name_ptr))
                 {
-                    RMOD_ERROR("Block/chain type \"%*.s\" was already defined", name_ptr->len, name_ptr->begin);
+                    RMOD_ERROR("Block/chain type \"%.*s\" was already defined", name_ptr->len, name_ptr->begin);
                     goto failed;
                 }
             }
@@ -1503,7 +1430,7 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                 }
 
                 out->label = *this->label;
-                out->type_value = this->type_id;
+                out->type_id = this->type_id;
             }
             //  Ensure that there is correspondence between children and parents
             for (u32 j = 0; j < chain_element_count; ++j)
@@ -1551,6 +1478,13 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                         goto failed;
                     }
                 }
+            }
+            //  Ensure the chain is non-cyclical
+            if ((res = check_flow(name_ptr, chain_elements, first_v, 0, chain_element_count)) != RMOD_RESULT_SUCCESS)
+            {
+                RMOD_ERROR("Cycle detected in chain");
+                jfree(chain_elements);
+                goto failed;
             }
             part_count = 0;
 
@@ -1690,7 +1624,7 @@ rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const r
                 ADD_STRING_LITERAL("\n\t\t<element etype=");
                 ENSURE_BUFFER_SPACE(64);
                 const char* type_string;
-                switch (types[e->type_value].type.type)
+                switch (types[e->type_id].type.type)
                 {
                 case RMOD_ELEMENT_TYPE_CHAIN:
                     type_string = "\"chain\"";
@@ -1704,7 +1638,7 @@ rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const r
                 }
                 usage += sprintf(buffer + usage, "%s", type_string);
                 ADD_STRING_LITERAL(">\n\t\t\t<type>");
-                ADD_STRING_SEGMENT(types[e->type_value].type.type_name);
+                ADD_STRING_SEGMENT(types[e->type_id].type.type_name);
                 ADD_STRING_LITERAL("</type>\n");
 
                 ADD_STRING_LITERAL("\t\t\t<label>");

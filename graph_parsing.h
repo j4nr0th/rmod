@@ -58,7 +58,7 @@ typedef u32 element_type_id;
 typedef struct rmod_chain_element_struct rmod_chain_element;
 struct rmod_chain_element_struct
 {
-    element_type_id type_value;
+    element_type_id type_id;
     string_segment label;
     u32 parent_count;
     u32* parents;

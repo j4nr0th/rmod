@@ -8,7 +8,11 @@
 #include <malloc.h>
 #include <assert.h>
 #include <sys/unistd.h>
+#ifndef _WIN32
 #include <sys/mman.h>
+#else
+#include <windows.h>
+#endif
 
 
 struct linear_jallocator_struct
@@ -21,8 +25,13 @@ struct linear_jallocator_struct
 void lin_jallocator_destroy(linear_jallocator* allocator)
 {
     linear_jallocator* this = (linear_jallocator*)allocator;
+#ifndef _WIN32
     int res = munmap(this->base, this->max - this->base);
     assert(res == 0);
+#else
+    WINBOOL res = VirtualFree(this->base, 0, MEM_RELEASE);
+    assert(res != 0);
+#endif
     free(this);
 }
 
@@ -120,7 +129,13 @@ void* lin_jrealloc(linear_jallocator* allocator, void* ptr, uint_fast64_t new_si
 
 linear_jallocator* lin_jallocator_create(uint_fast64_t total_size)
 {
+#ifndef _WIN32
     uint64_t PAGE_SIZE = sysconf(_SC_PAGESIZE);
+#else
+    SYSTEM_INFO sys_info;
+    GetSystemInfo(&sys_info);
+    uint64_t PAGE_SIZE = sys_info.dwPageSize;
+#endif
     linear_jallocator* this = malloc(sizeof(*this));
     if (!this) return this;
     uint64_t extra = (total_size % PAGE_SIZE);
@@ -128,8 +143,13 @@ linear_jallocator* lin_jallocator_create(uint_fast64_t total_size)
     {
         total_size += (PAGE_SIZE - extra);
     }
+#ifndef _WIN32
     void* mem = mmap(NULL, total_size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
     if (mem == MAP_FAILED)
+#else
+    void* mem = VirtualAlloc(NULL, total_size, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
+    if (mem == NULL)
+#endif
     {
         free(this);
         return NULL;

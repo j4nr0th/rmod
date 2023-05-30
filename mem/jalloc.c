@@ -5,7 +5,11 @@
 #include "jalloc.h"
 #include <malloc.h>
 #include <assert.h>
+#ifndef _WIN32
 #include <sys/mman.h>
+#else
+#include <windows.h>
+#endif
 #include <unistd.h>
 #include <string.h>
 typedef struct mem_chunk_struct mem_chunk;
@@ -61,7 +65,13 @@ jallocator* jallocator_create(uint_fast64_t pool_size, uint_fast64_t malloc_limi
     static long PG_SIZE = 0;
     if (!PG_SIZE)
     {
+#ifndef _WIN32
         PG_SIZE = sysconf(_SC_PAGESIZE);
+#else
+        SYSTEM_INFO sys_info;
+        GetSystemInfo(&sys_info);
+        PG_SIZE = (long) sys_info.dwPageSize;
+#endif
     }
     assert(PG_SIZE != 0);
     pool_size = PG_SIZE * (pool_size / PG_SIZE + ((pool_size % PG_SIZE) != 0)) ;
@@ -70,13 +80,23 @@ jallocator* jallocator_create(uint_fast64_t pool_size, uint_fast64_t malloc_limi
     for (uint_fast32_t i = 0; i < initial_pool_count; ++i)
     {
         mem_pool* p = this->pools + i;
+#ifndef _WIN32
         p->base = mmap(NULL, pool_size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
         if (p->base == MAP_FAILED)
+#else
+        p->base = VirtualAlloc(NULL, pool_size, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
+        if (p->base == NULL)
+#endif
         {
             for (uint_fast32_t j = 0; j < i; ++j)
             {
+#ifndef _WIN32
                 int r = munmap(this->pools[i].base, pool_size);
                 assert(r == 0);
+#else
+                WINBOOL res = VirtualFree(this->pools[i].base, 0, MEM_RELEASE);
+                assert(res != 0);
+#endif
             }
             free(this->pools);
             free(this);
@@ -103,8 +123,13 @@ void jallocator_destroy(jallocator* allocator)
 {
     for (uint_fast32_t i = 0; i < allocator->count; ++i)
     {
+#ifndef _WIN32
         int r = munmap(allocator->pools[i].base, allocator->pool_size);
         assert(r == 0);
+#else
+        WINBOOL res = VirtualFree(allocator->pools[i].base, 0, MEM_RELEASE);
+        assert(res != 0);
+#endif
     }
     memset(allocator->pools, 0, sizeof(*allocator->pools) * allocator->count);
     free(allocator->pools);
@@ -321,8 +346,13 @@ void* jalloc(jallocator* allocator, uint_fast64_t size)
             allocator->pools = new_ptr;
             allocator->capacity = new_capacity;
         }
+#ifndef _WIN32
         mem_chunk* base_chunk = mmap(NULL, allocator->pool_size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
         if (base_chunk == MAP_FAILED)
+#else
+        mem_chunk* base_chunk = VirtualAlloc(NULL, allocator->pool_size, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
+        if (base_chunk == NULL)
+#endif
         {
             return NULL;
         }

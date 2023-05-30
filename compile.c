@@ -426,22 +426,8 @@ rmod_result rmod_compile_graph(
                 goto failed;
             }
             memset(new_element_array, 0, total_element_count * sizeof*new_element_array);
-            //  First copy over all elements
-            for (u32 j = 0; j < chain->element_count; ++j)
-            {
-                const rmod_chain_element* element = chain->chain_elements + j;
-                if ((res = copy_element(element, new_element_array + j)) != RMOD_RESULT_SUCCESS)
-                {
-                    RMOD_ERROR("Failed copying an element");
-                    for (u32 k = 0; k < j; ++k)
-                    {
-                        jfree(new_element_array[k].parents);
-                        jfree(new_element_array[k].children);
-                    }
-                    jfree(new_element_array);
-                    goto failed;
-                }
-            }
+
+            memcpy(new_element_array, chain->chain_elements, sizeof(*chain->chain_elements) * chain->element_count);
             jfree(chain->chain_elements);
             chain->chain_elements = new_element_array;
         }
@@ -624,9 +610,11 @@ rmod_result rmod_compile_graph(
                 memmove(chain->chain_elements + j + sub_elements, chain->chain_elements + j + 1, sizeof(*chain->chain_elements) * (chain->element_count - j - 1));
                 assert(element_copy[0].parent_count == 0);
                 element_copy[0].parent_count = e_replaced.parent_count;
+                assert(element_copy[0].parents == NULL);
                 element_copy[0].parents = e_replaced.parents;
                 assert(element_copy[sub_elements - 1].child_count == 0);
                 element_copy[sub_elements - 1].child_count = e_replaced.child_count;
+                assert(element_copy[sub_elements - 1].children == NULL);
                 element_copy[sub_elements - 1].children = e_replaced.children;
                 //  Copy the memory from the copy_array now that there's space for them
                 memcpy(chain->chain_elements + j, element_copy, sizeof(*element_copy) * sub_elements);
@@ -638,6 +626,7 @@ rmod_result rmod_compile_graph(
             }
         }
 
+        assert(chain->element_count == total_element_count);
         chain->i_first = 0;
         chain->i_last = chain->element_count - 1;
         chain->compiled = true;

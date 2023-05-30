@@ -44,7 +44,7 @@ typedef char32_t c32;
 extern jallocator* G_JALLOCATOR;
 extern linear_jallocator* G_LIN_JALLOCATOR;
 
-#ifndef NDEBUG
+#ifdef NDEBUG
 //  When in debug mode, jallocator is not used, so that malloc can be used for debugging instead
 #define jalloc(size) malloc(size)
 #define jfree(ptr) free(ptr)
@@ -52,7 +52,7 @@ extern linear_jallocator* G_LIN_JALLOCATOR;
 #else
 #define jalloc(size) jalloc(G_JALLOCATOR, (size))
 #define jfree(ptr) jfree(G_JALLOCATOR, (ptr))
-#define jrellaoc(ptr, new_size) jfree(G_JALLOCATOR, (ptr), (new_size))
+#define jrealloc(ptr, new_size) jrealloc(G_JALLOCATOR, (ptr), (new_size))
 #endif
 
 #endif //RMOD_COMMON_H

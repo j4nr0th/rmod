@@ -1,7 +1,7 @@
 #include "rmod.h"
 #include "graph_parsing.h"
 #include "compile.h"
-
+#include <inttypes.h>
 #include <stdio.h>
 
 jallocator* G_JALLOCATOR;
@@ -57,7 +57,7 @@ int main()
     RMOD_ENTER_FUNCTION;
     rmod_error_set_hook(error_hook, NULL);
 
-    G_JALLOCATOR = jallocator_create((1 << 20), (1 << 19), 1);
+    G_JALLOCATOR = jallocator_create((1 << 20), (1 << 19), 2);
 
     G_LIN_JALLOCATOR = lin_jallocator_create((1 << 20));
 
@@ -99,12 +99,25 @@ int main()
     rmod_graph graph_a;
     res = rmod_compile_graph(n_types, p_types, "chain A", "master", &graph_a);
     assert(res == RMOD_RESULT_SUCCESS);
-//    rmod_destroy_graph(&graph_a);
+    rmod_destroy_graph(&graph_a);
 
     rmod_destroy_types(n_types, p_types);
     free(memory);
 
-    rmod_destroy_graph(&graph_a);
+//    rmod_destroy_graph(&graph_a);
+    assert(jallocator_verify(G_JALLOCATOR, NULL, NULL) == 0);
+    uint_fast32_t forgotten_indices[128];
+    uint_fast32_t r = jallocator_count_used_blocks(G_JALLOCATOR, 128, forgotten_indices);
+    assert(r != -1);
+    if (r > 0)
+    {
+        printf("Forgot to jfree %"PRIuFAST32" allocations:\n", r);
+        for (u32 i = 0; i < r; ++i)
+        {
+            printf("\tAllocation of idx: %"PRIuFAST32"\n", forgotten_indices[i]);
+        }
+    }
+
 
     {
         jallocator* const jallocator = G_JALLOCATOR;

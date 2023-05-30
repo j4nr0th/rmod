@@ -11,12 +11,15 @@
 typedef struct mem_chunk_struct mem_chunk;
 struct mem_chunk_struct
 {
-    uint_fast64_t size:62;
+    uint_fast64_t size:48;
+    uint_fast64_t idx:14;
     uint_fast64_t used:1;
     uint_fast64_t malloced:1;
     mem_chunk* next;
     mem_chunk* prev;
 };
+static_assert(offsetof(mem_chunk, next) == 8);
+
 typedef struct mem_pool_struct mem_pool;
 struct mem_pool_struct
 {
@@ -33,6 +36,7 @@ struct jallocator_struct
     uint_fast64_t pool_size;
     uint_fast64_t capacity;
     uint_fast64_t count;
+    uint_fast64_t allocator_index;
     mem_pool* pools;
     uint_fast64_t malloc_limit;
 };
@@ -357,6 +361,7 @@ void* jalloc(jallocator* allocator, uint_fast64_t size)
     }
 
     chunk->used = 1;
+    chunk->idx = ++allocator->allocator_index;
     return &chunk->next;
 }
 
@@ -575,6 +580,37 @@ void jfree(jallocator* allocator, void* ptr)
     insert_chunk_into_pool(pool, chunk);
 }
 
+uint_fast32_t
+jallocator_count_used_blocks(jallocator* allocator, uint_fast32_t size_out_buffer, uint_fast32_t* out_buffer)
+{
+    uint_fast32_t found = 0;
+    for (uint_fast64_t i = 0; i < allocator->count; ++i)
+    {
+        const mem_pool* pool = allocator->pools + i;
+        const void* pos = pool->base;
+        while (pos != pool->base + pool->used + pool->free)
+        {
+            if (pos > pool->base + pool->used + pool->free)
+            {
+                return -1;
+            }
+            const mem_chunk* chunk = pos;
+            if (chunk->used)
+            {
+                if (found < size_out_buffer)
+                {
+                    out_buffer[found] = chunk->idx;
+                }
+                found += 1;
+            }
+            pos += chunk->size;
+        }
+    }
+
+
+    return found;
+}
+
 static inline uint_fast64_t check_for_aligned_size(mem_chunk* chunk, uint_fast64_t alignment, uint_fast64_t size)
 {
     void* ptr = (void*)&chunk->next;
@@ -584,11 +620,4 @@ static inline uint_fast64_t check_for_aligned_size(mem_chunk* chunk, uint_fast64
         return size;
     }
     return size + (alignment - extra);
-}
-
-void* jalloc_aligned(jallocator* allocator, uint_fast64_t alignment, uint_fast64_t size)
-{
-    //  Check that the alignment is a power of two
-    assert(((alignment - 1) ^ alignment) == ((alignment - 1) | alignment));
-    return NULL;
 }

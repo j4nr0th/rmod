@@ -20,4 +20,6 @@ void* jrealloc(jallocator* allocator, void* ptr, uint_fast64_t new_size);
 
 void jfree(jallocator* allocator, void* ptr);
 
+uint_fast32_t jallocator_count_used_blocks(jallocator* allocator, uint_fast32_t size_out_buffer, uint_fast32_t* out_buffer);
+
 #endif //RMOD_JALLOC_H

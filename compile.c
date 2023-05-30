@@ -418,17 +418,14 @@ rmod_result rmod_compile_graph(
         if (total_element_count != chain->element_count)
         {
 
-            rmod_chain_element* new_element_array = jalloc(total_element_count * sizeof*new_element_array);
+            rmod_chain_element* new_element_array = jrealloc(chain->chain_elements, total_element_count * sizeof*new_element_array);
             if (!new_element_array)
             {
-                RMOD_ERROR("Failed jalloc(%zu)", total_element_count * sizeof*new_element_array);
+                RMOD_ERROR("Failed jrealloc(%p, %zu)", chain->chain_elements, total_element_count * sizeof*new_element_array);
                 res = RMOD_RESULT_NOMEM;
                 goto failed;
             }
-            memset(new_element_array, 0, total_element_count * sizeof*new_element_array);
-
-            memcpy(new_element_array, chain->chain_elements, sizeof(*chain->chain_elements) * chain->element_count);
-            jfree(chain->chain_elements);
+            memset(new_element_array + chain->element_count, 0, (total_element_count - chain->element_count) * sizeof*new_element_array);
             chain->chain_elements = new_element_array;
         }
 

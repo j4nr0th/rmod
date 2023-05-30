@@ -49,4 +49,6 @@ rmod_result rmod_compile_graph(
 
 rmod_result rmod_destroy_graph(rmod_graph* graph);
 
+rmod_result rmod_decompile_graph(rmod_graph* graph, u32* pn_types, rmod_element_type** pp_types);
+
 #endif //RMOD_COMPILE_H

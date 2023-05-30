@@ -31,7 +31,9 @@ typedef double_t f64;
 typedef float_t f32;
 
 typedef void u0, i0;
-
+#ifdef _WIN32
+typedef unsigned char char8_t;
+#endif
 typedef char8_t c8;
 typedef char16_t c16;
 typedef char32_t c32;

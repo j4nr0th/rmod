@@ -3,6 +3,9 @@
 //
 
 #include "graph_parsing.h"
+#ifdef _WIN32
+#include <stdio.h>
+#endif
 
 static const char WHITESPACE[] = {
         0x20,   //  this is ' '
@@ -1383,7 +1386,7 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                         goto failed;
                     }
                     out->parent_count = 0;
-                    out->parents = nullptr;
+                    out->parents = NULL;
                 }
 
                 //  Process children
@@ -1431,7 +1434,7 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                         goto failed;
                     }
                     out->child_count = 0;
-                    out->children = nullptr;
+                    out->children = NULL;
                 }
 
                 out->label = *this->label;

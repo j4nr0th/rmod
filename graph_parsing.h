@@ -5,6 +5,7 @@
 #ifndef RMOD_GRAPH_PARSING_H
 #define RMOD_GRAPH_PARSING_H
 #include "rmod.h"
+#include <stdbool.h>
 
 typedef enum rmod_failure_type_enum rmod_failure_type;
 enum rmod_failure_type_enum

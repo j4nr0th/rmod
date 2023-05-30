@@ -873,7 +873,7 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
             //  Check that name is not yet taken
             for (u32 j = 0; j < type_count; ++j)
             {
-                if (compare_string_segments(&types[j].type.type_name, &name_v))
+                if (compare_string_segments(&types[j].header.type_name, &name_v))
                 {
                     RMOD_ERROR("Block/chain type \"%.*s\" was already defined", name_v.len, name_v.begin);
                     goto failed;
@@ -898,7 +898,7 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                     {
                     .block =
                         {
-                        .type_header = { .type = RMOD_ELEMENT_TYPE_BLOCK, .type_name = name_v },
+                        .header = { .type_value = RMOD_ELEMENT_TYPE_BLOCK, .type_name = name_v },
                         .effect = effect_v,
                         .failure_type = failure_type_v,
                         .reliability = reliability_v,
@@ -1110,28 +1110,28 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                             for (u32 l = 0; l < type_count && !found_type; ++l)
                             {
                                 const rmod_element_type* type = types + l;
-                                if (type->type.type != type_v)
+                                if (type->header.type_value != type_v)
                                 {
                                     continue;
                                 }
-                                switch (type->type.type)
+                                switch (type->header.type_value)
                                 {
                                 case RMOD_ELEMENT_TYPE_BLOCK:
-                                    if (compare_string_segments(&type->type.type_name, &component->value))
+                                    if (compare_string_segments(&type->header.type_name, &component->value))
                                     {
                                         type_id = l;
                                         found_type = true;
                                     }
                                     break;
                                 case RMOD_ELEMENT_TYPE_CHAIN:
-                                    if (compare_string_segments(&type->type.type_name, &component->value))
+                                    if (compare_string_segments(&type->header.type_name, &component->value))
                                     {
                                         type_id = l;
                                         found_type = true;
                                     }
                                     break;
                                 default:
-                                    RMOD_ERROR("Invalid type enum value for type %s - %i", type->type.type_name, types->type);
+                                    RMOD_ERROR("Invalid type enum value for type %s - %i", type->header.type_name, types->header);
                                     res = RMOD_RESULT_BAD_XML;
                                     goto failed;
                                 }
@@ -1274,7 +1274,7 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
 
             for (u32 j = 0; j < type_count; ++j)
             {
-                if (compare_string_segments(&types[j].type.type_name, name_ptr))
+                if (compare_string_segments(&types[j].header.type_name, name_ptr))
                 {
                     RMOD_ERROR("Block/chain type \"%.*s\" was already defined", name_ptr->len, name_ptr->begin);
                     goto failed;
@@ -1541,7 +1541,7 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                     {
                             .chain =
                                     {
-                                            .type_header = { .type = RMOD_ELEMENT_TYPE_CHAIN, .type_name = *name_ptr },
+                                            .header = { .type_value = RMOD_ELEMENT_TYPE_CHAIN, .type_name = *name_ptr },
                                             .chain_elements = chain_elements,
                                             .element_count = chain_element_count,
                                             .i_first = first_v,
@@ -1572,7 +1572,7 @@ failed:
     jfree(element_buffer);
     for (u32 i = 0; i < type_count; ++i)
     {
-        if (types[i].type.type == RMOD_ELEMENT_TYPE_CHAIN)
+        if (types[i].header.type_value == RMOD_ELEMENT_TYPE_CHAIN)
         {
             rmod_chain* const this = &types[i].chain;
             for (u32 j = 0; j < this->element_count; ++j)
@@ -1622,7 +1622,7 @@ rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const r
     for (const rmod_element_type* p_type_pointer = types; p_type_pointer != types + type_count; ++p_type_pointer)
     {
         const rmod_element_type* type = p_type_pointer;
-        switch (type->type.type)
+        switch (type->header.type_value)
         {
         case RMOD_ELEMENT_TYPE_CHAIN:
         {
@@ -1630,9 +1630,9 @@ rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const r
             ADD_STRING_LITERAL("\t<chain>\n");
 
             ADD_STRING_LITERAL("\t\t<name>");
-            ENSURE_BUFFER_SPACE(this->type_header.type_name.len);
-            memcpy(buffer + usage, this->type_header.type_name.begin, this->type_header.type_name.len);
-            usage += this->type_header.type_name.len;
+            ENSURE_BUFFER_SPACE(this->header.type_name.len);
+            memcpy(buffer + usage, this->header.type_name.begin, this->header.type_name.len);
+            usage += this->header.type_name.len;
             ADD_STRING_LITERAL("</name>\n");
 
             ADD_STRING_LITERAL("\t\t<first>");
@@ -1674,7 +1674,7 @@ rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const r
                 ADD_STRING_LITERAL("\n\t\t<element etype=");
                 ENSURE_BUFFER_SPACE(64);
                 const char* type_string;
-                switch (types[e->type_id].type.type)
+                switch (types[e->type_id].header.type_value)
                 {
                 case RMOD_ELEMENT_TYPE_CHAIN:
                     type_string = "\"chain\"";
@@ -1688,7 +1688,7 @@ rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const r
                 }
                 usage += sprintf(buffer + usage, "%s", type_string);
                 ADD_STRING_LITERAL(">\n\t\t\t<type>");
-                ADD_STRING_SEGMENT(types[e->type_id].type.type_name);
+                ADD_STRING_SEGMENT(types[e->type_id].header.type_name);
                 ADD_STRING_LITERAL("</type>\n");
 
                 ADD_STRING_LITERAL("\t\t\t<label>");
@@ -1751,7 +1751,7 @@ rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const r
             ADD_STRING_LITERAL("\t<block>\n");
 
             ADD_STRING_LITERAL("\t\t<name>");
-            ADD_STRING_SEGMENT(this->type_header.type_name);
+            ADD_STRING_SEGMENT(this->header.type_name);
             ADD_STRING_LITERAL("</name>\n");
 
             ADD_STRING_LITERAL("\t\t<reliability>");
@@ -1805,7 +1805,7 @@ rmod_result rmod_destroy_types(u32 n_types, rmod_element_type* types)
     RMOD_ENTER_FUNCTION;
     for (u32 i = 0; i < n_types; ++i)
     {
-        switch (types[i].type.type)
+        switch (types[i].header.type_value)
         {
         case RMOD_ELEMENT_TYPE_CHAIN:
         {
@@ -1819,11 +1819,77 @@ rmod_result rmod_destroy_types(u32 n_types, rmod_element_type* types)
         }
             break;
         case RMOD_ELEMENT_TYPE_BLOCK:break;
-        default:RMOD_WARN("Unknown type encountered for type \"%.*s\"", types->type.type_name.len, types->type.type_name.begin);
+        default:RMOD_WARN("Unknown type encountered for type \"%.*s\"", types->header.type_name.len, types->header.type_name.begin);
             break;
         }
     }
     jfree(types);
+    RMOD_LEAVE_FUNCTION;
+    return RMOD_RESULT_SUCCESS;
+}
+
+rmod_result rmod_merge_xml(xml_element* p_dest, xml_element* p_src)
+{
+    RMOD_ENTER_FUNCTION;
+    if (!COMPARE_XML_TO_LITERAL(rmod, &p_dest->name))
+    {
+        RMOD_ERROR("Destination was not a root of a rmod xml file");
+        RMOD_LEAVE_FUNCTION;
+        return RMOD_RESULT_BAD_XML;
+    }
+    if (!COMPARE_XML_TO_LITERAL(rmod, &p_src->name))
+    {
+        RMOD_ERROR("Source was not a root of a rmod xml file");
+        RMOD_LEAVE_FUNCTION;
+        return RMOD_RESULT_BAD_XML;
+    }
+    const u32 new_child_count = p_dest->child_count + p_src->child_count;
+    const u32 new_attib_count = p_dest->attrib_count + p_src->attrib_count;
+    xml_element* const new_children = jrealloc(p_dest->children, sizeof*new_children * new_child_count);
+    if (!new_children)
+    {
+        RMOD_ERROR("Failed jrealloc(%p, %zu)", p_dest->children, sizeof*new_children * new_child_count);
+        RMOD_LEAVE_FUNCTION;
+        return RMOD_RESULT_NOMEM;
+    }
+    p_dest->children = new_children;
+    if (new_attib_count)
+    {
+        string_segment* const new_attrib_names = jrealloc(p_dest->attribute_names, sizeof*new_attrib_names * new_attib_count);
+        if (!new_attib_count)
+        {
+            RMOD_ERROR("Failed jrealloc(%p, %zu)", p_dest->attribute_names, sizeof*new_attrib_names * new_attib_count);
+            RMOD_LEAVE_FUNCTION;
+            return RMOD_RESULT_NOMEM;
+        }
+        p_dest->attribute_names = new_attrib_names;
+        string_segment* const new_attrib_values = jrealloc(p_dest->attribute_names, sizeof*new_attrib_values * new_attib_count);
+        if (!new_attib_count)
+        {
+            jfree(new_attrib_names);
+            RMOD_ERROR("Failed jrealloc(%p, %zu)", p_dest->attribute_names, sizeof*new_attrib_values * new_attib_count);
+            RMOD_LEAVE_FUNCTION;
+            return RMOD_RESULT_NOMEM;
+        }
+        p_dest->attribute_values = new_attrib_values;
+        memcpy(new_attrib_names + p_dest->attrib_count, p_src->attribute_names, sizeof(*new_attrib_names) * p_src->attrib_count);
+        memcpy(new_attrib_values + p_dest->attrib_count, p_src->attribute_values, sizeof(*new_attrib_values) * p_src->attrib_count);
+        p_dest->attrib_count = new_attib_count;
+    }
+    else
+    {
+        assert(p_dest->attribute_values == NULL);
+        p_dest->attribute_values = NULL;
+        assert(p_dest->attribute_names == NULL);
+        p_dest->attribute_names = NULL;
+    }
+    //  NOTE: removing things from p_src might be unnecessary
+    memcpy(new_children + p_dest->child_count, p_src->children, sizeof(*new_children) * p_src->child_count);
+    p_dest->child_count = new_child_count;
+    jfree(p_src->children);
+    jfree(p_src->attribute_names);
+    jfree(p_src->attribute_values);
+    memset(p_src, 0, sizeof*p_src);
     RMOD_LEAVE_FUNCTION;
     return RMOD_RESULT_SUCCESS;
 }

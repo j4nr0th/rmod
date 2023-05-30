@@ -141,14 +141,14 @@ rmod_result rmod_compile_graph(
     const rmod_chain* target_chain = NULL;
     for (u32 i = 0; i < n_types; ++i)
     {
-        const bool is_chain = p_types[i].type.type == RMOD_ELEMENT_TYPE_CHAIN;
-        if (is_chain && strncmp(chain_name, p_types[i].type.type_name.begin, p_types[i].type.type_name.len) == 0)
+        const bool is_chain = p_types[i].header.type_value == RMOD_ELEMENT_TYPE_CHAIN;
+        if (is_chain && strncmp(chain_name, p_types[i].header.type_name.begin, p_types[i].header.type_name.len) == 0)
         {
             assert(!target_chain);
             target_chain = &p_types[i].chain;
         }
         chain_count += is_chain;
-        total_chain_name_memory += p_types[i].type.type_name.len + 1;
+        total_chain_name_memory += p_types[i].header.type_name.len + 1;
     }
     if (!target_chain)
     {
@@ -204,7 +204,7 @@ rmod_result rmod_compile_graph(
         for (u32 i = 0, j = 0; i < n_types && j < chain_count; ++i)
         {
             //  Is this type a chain
-            if (p_types[i].type.type != RMOD_ELEMENT_TYPE_CHAIN)
+            if (p_types[i].header.type_value != RMOD_ELEMENT_TYPE_CHAIN)
             {
                 continue;
             }
@@ -222,7 +222,7 @@ rmod_result rmod_compile_graph(
         for (u32 i = 0, j = 0; i < n_types && j < chain_count; ++i)
         {
             //  Is this type a chain
-            if (p_types[i].type.type != RMOD_ELEMENT_TYPE_CHAIN)
+            if (p_types[i].header.type_value != RMOD_ELEMENT_TYPE_CHAIN)
             {
                 continue;
             }
@@ -238,7 +238,7 @@ rmod_result rmod_compile_graph(
                 const rmod_chain_element* element = this->chain_elements + k;
                 const rmod_element_type* element_type = p_types + element->type_id;
                 //  Is the element's type chain?
-                if (element_type->type.type != RMOD_ELEMENT_TYPE_CHAIN)
+                if (element_type->header.type_value != RMOD_ELEMENT_TYPE_CHAIN)
                 {
                     continue;
                 }
@@ -390,8 +390,8 @@ rmod_result rmod_compile_graph(
             //  No compilation needed
             continue;
         }
-        assert(chain->type_header.type == RMOD_ELEMENT_TYPE_CHAIN);
-        RMOD_INFO("Building chain \"%.*s\"", chain->type_header.type_name.len, chain->type_header.type_name.begin);
+        assert(chain->header.type_value == RMOD_ELEMENT_TYPE_CHAIN);
+        RMOD_INFO("Building chain \"%.*s\"", chain->header.type_name.len, chain->header.type_name.begin);
 
         //  Building a chain means substituting all of its elements for blocks this requires all of its dependencies to
         //  also be built already
@@ -401,7 +401,7 @@ rmod_result rmod_compile_graph(
         {
             const rmod_chain_element* element = chain->chain_elements + j;
             const rmod_element_type* element_type = p_types + element->type_id;
-            switch (element_type->type.type)
+            switch (element_type->header.type_value)
             {
             case RMOD_ELEMENT_TYPE_BLOCK:
                 total_element_count += 1;
@@ -409,7 +409,7 @@ rmod_result rmod_compile_graph(
             case RMOD_ELEMENT_TYPE_CHAIN:
                 total_element_count += element_type->chain.element_count;
                 break;
-            default:RMOD_ERROR("Element type \"%.*s\" had invalid type", element_type->type.type_name.len, element_type->type.type_name.begin);
+            default:RMOD_ERROR("Element type \"%.*s\" had invalid type", element_type->header.type_name.len, element_type->header.type_name.begin);
             res = RMOD_RESULT_BAD_XML;
             goto failed;
             }
@@ -479,7 +479,7 @@ rmod_result rmod_compile_graph(
             //      If queue is empty, there is at least one cycle in the chain dependencies
             if (found == 0)
             {
-                RMOD_ERROR_CRIT("Cyclical flow for chain \"%.*s\" were found", chain->type_header.type_name.len, chain->type_header.type_name.begin);
+                RMOD_ERROR_CRIT("Cyclical flow for chain \"%.*s\" were found", chain->header.type_name.len, chain->header.type_name.begin);
                 //  Not really necessary, since this function calls exit
                 exit(EXIT_FAILURE);
             }
@@ -543,14 +543,14 @@ rmod_result rmod_compile_graph(
                 const rmod_chain_element* element = chain->chain_elements + j;
                 const rmod_element_type* type = p_types + element->type_id;
                 //  Not a chain, so skip
-                if (type->type.type != RMOD_ELEMENT_TYPE_CHAIN)
+                if (type->header.type_value != RMOD_ELEMENT_TYPE_CHAIN)
                 {
                     continue;
                 }
                 const rmod_chain* sub_chain = &type->chain;
                 if (!sub_chain->compiled)
                 {
-                    RMOD_ERROR("Chain \"%.*s\" was not compiled as dependency for chain \"%.*s\"", sub_chain->type_header.type_name.len, sub_chain->type_header.type_name.begin, chain->type_header.type_name.len, chain->type_header.type_name.begin);
+                    RMOD_ERROR("Chain \"%.*s\" was not compiled as dependency for chain \"%.*s\"", sub_chain->header.type_name.len, sub_chain->header.type_name.begin, chain->header.type_name.len, chain->header.type_name.begin);
                     res = RMOD_RESULT_STUPIDITY;
                     goto failed;
                 }
@@ -659,7 +659,7 @@ rmod_result rmod_compile_graph(
     {
         const rmod_chain_element* const element = target_chain->chain_elements + i;
         const rmod_element_type* const type = p_types + element->type_id;
-        if (type->type.type != RMOD_ELEMENT_TYPE_BLOCK)
+        if (type->header.type_value != RMOD_ELEMENT_TYPE_BLOCK)
         {
             RMOD_ERROR("Converting element \"%*.s\" - BLOCK-%03i was not possible because its type was not block. This should have not have happened, since chain was marked as compiled.");
             res = RMOD_RESULT_STUPIDITY;
@@ -670,7 +670,7 @@ rmod_result rmod_compile_graph(
         u32 type_index;
         for (type_index = 0; type_index < unique_types; ++type_index)
         {
-            if (strncmp((const char*)type_array[type_index].name, block_type->type_header.type_name.begin, block_type->type_header.type_name.len) == 0)
+            if (strncmp((const char*)type_array[type_index].name, block_type->header.type_name.begin, block_type->header.type_name.len) == 0)
             {
                 //  Was already put in there
                 break;
@@ -679,15 +679,15 @@ rmod_result rmod_compile_graph(
         if (type_index == unique_types)
         {
             //  Add it in the array
-            c8* name_buffer = jalloc(block_type->type_header.type_name.len + 1);
+            c8* name_buffer = jalloc(block_type->header.type_name.len + 1);
             if (!name_buffer)
             {
-                RMOD_ERROR("Failed jalloc(%zu)", block_type->type_header.type_name.len + 1);
+                RMOD_ERROR("Failed jalloc(%zu)", block_type->header.type_name.len + 1);
                 res = RMOD_RESULT_NOMEM;
                 goto free_failed;
             }
-            memcpy(name_buffer, block_type->type_header.type_name.begin, block_type->type_header.type_name.len);
-            name_buffer[block_type->type_header.type_name.len] = 0;
+            memcpy(name_buffer, block_type->header.type_name.begin, block_type->header.type_name.len);
+            name_buffer[block_type->header.type_name.len] = 0;
             type_array[unique_types].name = name_buffer;
             type_array[unique_types].failure_type = block_type->failure_type;
             type_array[unique_types].reliability = block_type->reliability;
@@ -769,14 +769,14 @@ rmod_result rmod_compile_graph(
     }
     p_out->module_name = module_copy;
 
-    c8* const name_copy = jalloc(target_chain->type_header.type_name.len + 1);
+    c8* const name_copy = jalloc(target_chain->header.type_name.len + 1);
     if (!name_copy)
     {
-        RMOD_WARN("Failed jalloc(%zu), but not critical because it was for a name string", target_chain->type_header.type_name.len + 1);
+        RMOD_WARN("Failed jalloc(%zu), but not critical because it was for a name string", target_chain->header.type_name.len + 1);
     }
     else
     {
-        memcpy(name_copy, target_chain->type_header.type_name.begin, target_chain->type_header.type_name.len + 1);
+        memcpy(name_copy, target_chain->header.type_name.begin, target_chain->header.type_name.len + 1);
     }
     p_out->graph_type = name_copy;
 

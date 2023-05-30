@@ -66,22 +66,15 @@ int main()
     u32 n_types;
     rmod_element_type* p_types;
 
-    FILE* example_file = fopen("../input/chain_dependence_test.xml", "r");
-    if (!example_file)
+    size_t mem_size;
+    char* memory = map_file_to_memory("../input/chain_dependence_test.xml", &mem_size);
+    if (!memory)
     {
-        RMOD_ERROR_CRIT("Could not open file, reason: %s", RMOD_ERRNO_MESSAGE);
+        RMOD_ERROR_CRIT("Could not map file to memory");
     }
-    fseek(example_file, 0, SEEK_END);
-    size_t size = ftell(example_file) + 1;
-    char* memory = calloc(size, 1);
-    assert(memory);
-    fseek(example_file, 0, SEEK_SET);
-    size_t v = fread(memory, 1, size, example_file);
-    assert(v);
-    fclose(example_file);
 
     xml_element root;
-    rmod_result res = rmod_parse_xml(size - 1, memory, &root);
+    rmod_result res = rmod_parse_xml(mem_size - 1, memory, &root);
     assert(res == RMOD_RESULT_SUCCESS);
     print_xml_element(&root, 0);
 
@@ -102,7 +95,7 @@ int main()
     rmod_destroy_graph(&graph_a);
 
     rmod_destroy_types(n_types, p_types);
-    free(memory);
+    unmap_file(memory, mem_size);
 
 //    rmod_destroy_graph(&graph_a);
     assert(jallocator_verify(G_JALLOCATOR, NULL, NULL) == 0);

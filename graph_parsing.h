@@ -40,14 +40,14 @@ struct string_segment_struct
 typedef struct rmod_element_type_header_struct rmod_element_type_header;
 struct rmod_element_type_header_struct
 {
-    rmod_element_type_value type;
+    rmod_element_type_value type_value;
     string_segment type_name;
 };
 
 typedef struct rmod_block_struct rmod_block;
 struct rmod_block_struct
 {
-    rmod_element_type_header type_header;
+    rmod_element_type_header header;
     f32 reliability;
     f32 effect;
     rmod_failure_type failure_type;
@@ -71,7 +71,7 @@ struct rmod_chain_element_struct
 typedef struct rmod_chain_struct rmod_chain;
 struct rmod_chain_struct
 {
-    rmod_element_type_header type_header;
+    rmod_element_type_header header;
     u32 element_count;
     u32 i_first;
     u32 i_last;
@@ -82,7 +82,7 @@ struct rmod_chain_struct
 typedef union rmod_element_type_union rmod_element_type;
 union rmod_element_type_union
 {
-    rmod_element_type_header type;
+    rmod_element_type_header header;
     rmod_chain chain;
     rmod_block block;
 };
@@ -106,6 +106,8 @@ rmod_result
 rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const rmod_element_type* types, char** p_out);
 
 rmod_result rmod_parse_xml(size_t len, const char* xml, xml_element* p_root);
+
+rmod_result rmod_merge_xml(xml_element* p_dest, xml_element* p_src);
 
 rmod_result rmod_release_xml(xml_element* root);
 

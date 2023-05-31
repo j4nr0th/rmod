@@ -1,6 +1,7 @@
 #include "rmod.h"
 #include "graph_parsing.h"
 #include "compile.h"
+#include "program.h"
 #include <inttypes.h>
 #include <stdio.h>
 
@@ -62,40 +63,25 @@ int main()
     G_LIN_JALLOCATOR = lin_jallocator_create((1 << 20));
 
 
-    element_type_id master_type_id;
-    u32 n_types;
-    rmod_element_type* p_types;
-
-    size_t mem_size;
-    char* memory = map_file_to_memory("../input/chain_dependence_test.xml", &mem_size);
-    if (!memory)
-    {
-        RMOD_ERROR_CRIT("Could not map file to memory");
-    }
-
-    xml_element root;
-    rmod_result res = rmod_parse_xml(mem_size - 1, memory, &root);
+    rmod_program program;
+    rmod_result res = rmod_program_create("../input/chain_dependence_test.xml", &program);
     assert(res == RMOD_RESULT_SUCCESS);
-    print_xml_element(&root, 0);
-
-    res = rmod_convert_xml(&root, &n_types, &p_types);
-    assert(res == RMOD_RESULT_SUCCESS);
-
+    rmod_graph graph_a;
     char* text;
-    res = rmod_serialize_types(G_LIN_JALLOCATOR, n_types, p_types, &text);
+    res = rmod_serialize_types(G_LIN_JALLOCATOR, program.n_types, program.p_types, &text);
     assert(res == RMOD_RESULT_SUCCESS);
-    printf("Serialized types:\n %s\n", text);
+    printf("Serialized types before compilation:\n%s\n\n", text);
+    lin_jfree(G_LIN_JALLOCATOR, text);
+    res = rmod_compile(&program, &graph_a, "chain A", "master");
+    assert(res == RMOD_RESULT_SUCCESS);
+
+    res = rmod_serialize_types(G_LIN_JALLOCATOR, program.n_types, program.p_types, &text);
+    assert(res == RMOD_RESULT_SUCCESS);
+    printf("Serialized types after compilation:\n%s\n\n", text);
     lin_jfree(G_LIN_JALLOCATOR, text);
 
-    rmod_release_xml(&root);
-
-    rmod_graph graph_a;
-    res = rmod_compile_graph(n_types, p_types, "chain A", "master", &graph_a);
-    assert(res == RMOD_RESULT_SUCCESS);
     rmod_destroy_graph(&graph_a);
-
-    rmod_destroy_types(n_types, p_types);
-    unmap_file(memory, mem_size);
+    rmod_program_delete(&program);
 
 //    rmod_destroy_graph(&graph_a);
     assert(jallocator_verify(G_JALLOCATOR, NULL, NULL) == 0);

@@ -105,15 +105,15 @@ struct xml_element_struct
 rmod_result
 rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const rmod_element_type* types, char** p_out);
 
-rmod_result rmod_parse_xml(size_t len, const char* xml, xml_element* p_root);
-
-rmod_result rmod_merge_xml(xml_element* p_dest, xml_element* p_src);
+rmod_result rmod_parse_xml(const rmod_memory_file* mem_file, xml_element* p_root);
 
 rmod_result rmod_release_xml(xml_element* root);
 
 rmod_result rmod_serialize_xml(xml_element* root, FILE* f_out);
 
-rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_element_type** pp_types);
+rmod_result rmod_convert_xml(
+        xml_element* root, u32* p_file_count, u32* p_file_capacity, rmod_memory_file** pp_files, u32* pn_types,
+        rmod_element_type** pp_types);
 
 rmod_result rmod_destroy_types(u32 n_types, rmod_element_type* types);
 

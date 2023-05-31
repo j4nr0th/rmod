@@ -18,6 +18,8 @@ static const char* const ERROR_MESSAGES[RMOD_RESULT_COUNT] =
                 [RMOD_RESULT_CYCLICAL_CHAIN] = "CHAIN CONTAINS A CYCLE",
                 [RMOD_RESULT_CYCLICAL_CHAIN_DEPENDENCY] = "CHAIN DEPENDS ON CHAIN(S) WHICH DEPEND ON IT",
                 [RMOD_RESULT_STUPIDITY] = "ERROR OCCURRED DUE TO MY STUPIDITY",
+                [RMOD_RESULT_BAD_FILE_MAP] = "FILE COULD NOT BE MAPPED",
+                [RMOD_RESULT_BAD_PATH] = "FILE PATH WAS INVALID",
         };
 
 const char* rmod_result_str(rmod_result error_code)

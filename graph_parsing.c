@@ -5,6 +5,10 @@
 #include "graph_parsing.h"
 #ifdef _WIN32
 #include <stdio.h>
+#else
+#include <unistd.h>
+#include <libgen.h>
+
 #endif
 
 static const char WHITESPACE[] = {
@@ -13,6 +17,29 @@ static const char WHITESPACE[] = {
         0xD,    //  this is '\r'
         0xA     //  this is '\n'
 };
+
+static bool compare_xml_string(const u64 len, const char* str, const string_segment* xml)
+{
+    if (xml->len != len)
+        return false;
+    return memcmp(str, xml->begin, len) == 0;
+}
+static bool compare_case_xml_string(const u64 len, const char* str, const string_segment* xml)
+{
+    if (xml->len != len)
+        return false;
+    return strncasecmp(str, xml->begin, len) == 0;
+}
+static bool compare_string_segments(const string_segment* s1, const string_segment* s2)
+{
+    if (s1->len != s2->len)
+        return false;
+    return memcmp(s1->begin, s2->begin, s1->len) == 0;
+}
+
+
+#define COMPARE_XML_TO_LITERAL(literal, xml) compare_xml_string(sizeof(#literal) - 1, #literal, (xml))
+#define COMPARE_CASE_XML_TO_LITERAL(literal, xml) compare_case_xml_string(sizeof(#literal) - 1, #literal, (xml))
 
 static bool is_whitespace(c8 c)
 {
@@ -252,9 +279,11 @@ static bool parse_name_from_string(const u64 max_len, const char* const str, str
     return true;
 }
 
-rmod_result rmod_parse_xml(const size_t len, const char* const xml, xml_element* p_root)
+rmod_result rmod_parse_xml( const rmod_memory_file* mem_file, xml_element* p_root)
 {
     RMOD_ENTER_FUNCTION;
+    const char* const xml = mem_file->ptr;
+    const u64 len = mem_file->file_size;
     rmod_result res;
     const char* pos;
     //  Parse the xml prologue (if present)
@@ -598,28 +627,6 @@ rmod_result rmod_serialize_xml(xml_element* root, FILE* f_out)
     return RMOD_RESULT_SUCCESS;
 }
 
-static bool compare_xml_string(const u64 len, const char* str, const string_segment* xml)
-{
-    if (xml->len != len)
-        return false;
-    return memcmp(str, xml->begin, len) == 0;
-}
-static bool compare_case_xml_string(const u64 len, const char* str, const string_segment* xml)
-{
-    if (xml->len != len)
-        return false;
-    return strncasecmp(str, xml->begin, len) == 0;
-}
-static bool compare_string_segments(const string_segment* s1, const string_segment* s2)
-{
-    if (s1->len != s2->len)
-        return false;
-    return memcmp(s1->begin, s2->begin, s1->len) == 0;
-}
-
-
-#define COMPARE_XML_TO_LITERAL(literal, xml) compare_xml_string(sizeof(#literal) - 1, #literal, (xml))
-#define COMPARE_CASE_XML_TO_LITERAL(literal, xml) compare_case_xml_string(sizeof(#literal) - 1, #literal, (xml))
 
 typedef struct intermediate_element_struct intermediate_element;
 struct intermediate_element_struct
@@ -687,7 +694,79 @@ static rmod_result check_flow(const string_segment* p_name, const rmod_chain_ele
     return RMOD_RESULT_SUCCESS;
 }
 
-rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_element_type** pp_types)
+static rmod_result xml_insert_as_child(xml_element* p_dest, xml_element* p_src, u32 where)
+{
+    RMOD_ENTER_FUNCTION;
+    if (!COMPARE_XML_TO_LITERAL(rmod, &p_dest->name))
+    {
+        RMOD_ERROR("Destination was not a root of a rmod xml file");
+        RMOD_LEAVE_FUNCTION;
+        return RMOD_RESULT_BAD_XML;
+    }
+    if (!COMPARE_XML_TO_LITERAL(rmod, &p_src->name))
+    {
+        RMOD_ERROR("Source was not a root of a rmod xml file");
+        RMOD_LEAVE_FUNCTION;
+        return RMOD_RESULT_BAD_XML;
+    }
+    const u32 new_child_count = p_dest->child_count + p_src->child_count - 1;
+    const u32 new_attib_count = p_dest->attrib_count + p_src->attrib_count;
+    xml_element* const new_children = jrealloc(p_dest->children, sizeof*new_children * new_child_count);
+    if (!new_children)
+    {
+        RMOD_ERROR("Failed jrealloc(%p, %zu)", p_dest->children, sizeof*new_children * new_child_count);
+        RMOD_LEAVE_FUNCTION;
+        return RMOD_RESULT_NOMEM;
+    }
+    p_dest->children = new_children;
+    if (new_attib_count)
+    {
+        string_segment* const new_attrib_names = jrealloc(p_dest->attribute_names, sizeof*new_attrib_names * new_attib_count);
+        if (!new_attib_count)
+        {
+            RMOD_ERROR("Failed jrealloc(%p, %zu)", p_dest->attribute_names, sizeof*new_attrib_names * new_attib_count);
+            RMOD_LEAVE_FUNCTION;
+            return RMOD_RESULT_NOMEM;
+        }
+        p_dest->attribute_names = new_attrib_names;
+        string_segment* const new_attrib_values = jrealloc(p_dest->attribute_names, sizeof*new_attrib_values * new_attib_count);
+        if (!new_attib_count)
+        {
+            jfree(new_attrib_names);
+            RMOD_ERROR("Failed jrealloc(%p, %zu)", p_dest->attribute_names, sizeof*new_attrib_values * new_attib_count);
+            RMOD_LEAVE_FUNCTION;
+            return RMOD_RESULT_NOMEM;
+        }
+        p_dest->attribute_values = new_attrib_values;
+        memmove(new_attrib_names + (new_attib_count - p_dest->attrib_count), p_dest->attribute_names, sizeof(*new_attrib_names) * p_dest->attrib_count);
+        memcpy(new_attrib_names, p_src->attribute_names, sizeof(*new_attrib_names) * p_src->attrib_count);
+
+        memmove(new_attrib_values + (new_attib_count - p_dest->attrib_count), p_dest->attribute_values, sizeof(*new_attrib_values) * p_dest->attrib_count);
+        memcpy(new_attrib_values, p_src->attribute_values, sizeof(*new_attrib_values) * p_src->attrib_count);
+        p_dest->attrib_count = new_attib_count;
+    }
+    else
+    {
+        assert(p_dest->attribute_values == NULL);
+        p_dest->attribute_values = NULL;
+        assert(p_dest->attribute_names == NULL);
+        p_dest->attribute_names = NULL;
+    }
+
+    memmove(new_children + where + p_src->child_count, p_dest->children + where + 1, sizeof(*new_children) * p_dest->child_count - 1);
+    memcpy(new_children + where, p_src->children, sizeof(*new_children) * p_src->child_count);
+    p_dest->child_count = new_child_count;
+    jfree(p_src->children);
+    jfree(p_src->attribute_names);
+    jfree(p_src->attribute_values);
+    memset(p_src, 0, sizeof*p_src);
+    RMOD_LEAVE_FUNCTION;
+    return RMOD_RESULT_SUCCESS;
+}
+
+rmod_result rmod_convert_xml(
+        xml_element* root, u32* p_file_count, u32* p_file_capacity, rmod_memory_file** pp_files, u32* pn_types,
+        rmod_element_type** pp_types)
 {
     RMOD_ENTER_FUNCTION;
     u32 type_count = 0;
@@ -1550,6 +1629,164 @@ rmod_result rmod_convert_xml(const xml_element* root, u32* pn_types, rmod_elemen
                                     }
                     };
         }
+        else if (COMPARE_XML_TO_LITERAL(include, &e->name))
+        {
+            //  Include tag: value is the name of the file which has to be converted into full path
+            char* const name_buffer = lin_jalloc(G_LIN_JALLOCATOR, e->value.len + 1);
+            if (!name_buffer)
+            {
+                RMOD_ERROR("Failed lin_jalloc(%p, %zu)", G_LIN_JALLOCATOR, e->value.len + 1);
+                res = RMOD_RESULT_NOMEM;
+                goto failed;
+            }
+            memcpy(name_buffer, e->value.begin, e->value.len);
+            name_buffer[e->value.len] = 0;
+
+            char* buffer = lin_jalloc(G_LIN_JALLOCATOR, PATH_MAX);
+            if (!buffer)
+            {
+                RMOD_ERROR("Failed lin_jalloc(%p, %zu)", G_LIN_JALLOCATOR, PATH_MAX);
+                res = RMOD_RESULT_NOMEM;
+                goto failed;
+            }
+            char* working_dir = lin_jalloc(G_LIN_JALLOCATOR, PATH_MAX);
+            if (!working_dir)
+            {
+                RMOD_ERROR("Failed lin_jalloc(%p, %zu)", G_LIN_JALLOCATOR, PATH_MAX);
+                res = RMOD_RESULT_NOMEM;
+                goto failed;
+            }
+
+
+            if (!realpath(name_buffer, buffer))
+            {
+                RMOD_ERROR("Could not find real path of file \"%s\", reason: %s", name_buffer, RMOD_ERRNO_MESSAGE);
+                res = RMOD_RESULT_NOMEM;
+                goto failed;
+            }
+            u32 j;
+            for (j = 0; j < *p_file_count; ++j)
+            {
+                const rmod_memory_file* p_file = (*pp_files) + j;
+                if (strcmp(p_file->name, buffer) == 0)
+                {
+                    break;
+                }
+
+            }
+
+            if (j == *p_file_count)
+            {
+                if (!getcwd(working_dir, PATH_MAX))
+                {
+                    RMOD_ERROR("Failed getting the current working directory, reason: %s", RMOD_ERRNO_MESSAGE);
+                    res = RMOD_RESULT_BAD_PATH;
+                    goto failed;
+                }
+                //  Add new file to list and merge them
+                rmod_memory_file mem_file;
+                res = map_file_to_memory(buffer, &mem_file);
+                if (res != RMOD_RESULT_SUCCESS)
+                {
+                    RMOD_ERROR("Could not map included file \"%s\" to memory", buffer);
+                    goto failed;
+                }
+                xml_element included_root;
+                res = rmod_parse_xml(&mem_file, &included_root);
+                if (res != RMOD_RESULT_SUCCESS)
+                {
+                    unmap_file(&mem_file);
+                    RMOD_ERROR("Failed parsing included file \"%s\"", buffer);
+                    goto failed;
+                }
+
+                u32 n_new_types;
+                rmod_element_type* p_new_types = NULL;
+                char* new_wd = lin_jalloc(G_LIN_JALLOCATOR, PATH_MAX);
+                if (!new_wd)
+                {
+                    rmod_release_xml(&included_root);
+                    unmap_file(&mem_file);
+                    RMOD_ERROR("Failed lin_jalloc(%p, %zu)", G_LIN_JALLOCATOR, PATH_MAX);
+                    res = RMOD_RESULT_NOMEM;
+                    goto failed;
+                }
+                //  Literally the same size, so not checking this return value
+                strncpy(new_wd, buffer, PATH_MAX);
+                const int ret_1 = chdir(dirname(new_wd));
+                lin_jfree(G_LIN_JALLOCATOR, new_wd);
+                if (ret_1 < 0)
+                {
+                    RMOD_ERROR("could not change directory to location of \"%s\", reason: %s", new_wd, RMOD_ERRNO_MESSAGE);
+                    rmod_release_xml(&included_root);
+                    unmap_file(&mem_file);
+                    res = RMOD_RESULT_BAD_PATH;
+                    goto failed;
+                }
+
+                res = rmod_convert_xml(&included_root, p_file_count, p_file_capacity, pp_files, &n_new_types, &p_new_types);
+                rmod_release_xml(&included_root);
+                if (chdir(working_dir) < 0)
+                {
+                    jfree(p_new_types);
+                    RMOD_ERROR("Could not change directory back to location of previous working directory \"%s\"", working_dir, RMOD_ERRNO_MESSAGE);
+                    unmap_file(&mem_file);
+                    res = RMOD_RESULT_BAD_PATH;
+                    goto failed;
+                }
+                if (res != RMOD_RESULT_SUCCESS)
+                {
+                    unmap_file(&mem_file);
+                    RMOD_ERROR("Failed converting included file \"%s\"", buffer);
+                    goto failed;
+                }
+
+                //  Merge the files and types arrays
+                if (type_count + n_new_types >= type_capacity)
+                {
+                    const u64 new_capacity = type_capacity + type_count;
+                    rmod_element_type* const new_ptr = jrealloc(types, new_capacity * sizeof*types);
+                    if (!new_ptr)
+                    {
+                        jfree(p_new_types);
+                        unmap_file(&mem_file);
+                        RMOD_ERROR("Failed jrealloc(%p, %zu)", types, new_capacity * sizeof*types);
+                        res = RMOD_RESULT_NOMEM;
+                        goto failed;
+                    }
+                    memset(new_ptr + type_count, 0, sizeof(*new_ptr) * (new_capacity - type_count));
+                    type_capacity = new_capacity;
+                    types = new_ptr;
+                }
+                if (*p_file_count >= *p_file_capacity)
+                {
+                    const u64 new_capacity = *p_file_capacity + 8;
+                    rmod_memory_file* const new_ptr = jrealloc(*pp_files, new_capacity * sizeof(**pp_files));
+                    if (!new_ptr)
+                    {
+                        jfree(p_new_types);
+                        unmap_file(&mem_file);
+                        RMOD_ERROR("Failed jrealloc(%p, %zu)", *pp_files, new_capacity * sizeof(**pp_files));
+                        res = RMOD_RESULT_NOMEM;
+                        goto failed;
+                    }
+                    memset(new_ptr + *p_file_count, 0, sizeof(*new_ptr) * (new_capacity - *p_file_count));
+                    *p_file_capacity = new_capacity;
+                    *pp_files = new_ptr;
+                }
+
+                memcpy(types + type_count, p_new_types, sizeof(*types) * n_new_types);
+                type_count += n_new_types;
+                jfree(p_new_types);
+
+                (*pp_files)[*p_file_count] = mem_file;
+                *p_file_count += 1;
+            }
+
+            lin_jfree(G_LIN_JALLOCATOR, working_dir);
+            lin_jfree(G_LIN_JALLOCATOR, buffer);
+            lin_jfree(G_LIN_JALLOCATOR, name_buffer);
+        }
         else
         {
             RMOD_WARN("Unknown element \"%.*s\" was found in the root \"rmod\" and will be ignored", e->name.len, e->name.begin);
@@ -1828,68 +2065,3 @@ rmod_result rmod_destroy_types(u32 n_types, rmod_element_type* types)
     return RMOD_RESULT_SUCCESS;
 }
 
-rmod_result rmod_merge_xml(xml_element* p_dest, xml_element* p_src)
-{
-    RMOD_ENTER_FUNCTION;
-    if (!COMPARE_XML_TO_LITERAL(rmod, &p_dest->name))
-    {
-        RMOD_ERROR("Destination was not a root of a rmod xml file");
-        RMOD_LEAVE_FUNCTION;
-        return RMOD_RESULT_BAD_XML;
-    }
-    if (!COMPARE_XML_TO_LITERAL(rmod, &p_src->name))
-    {
-        RMOD_ERROR("Source was not a root of a rmod xml file");
-        RMOD_LEAVE_FUNCTION;
-        return RMOD_RESULT_BAD_XML;
-    }
-    const u32 new_child_count = p_dest->child_count + p_src->child_count;
-    const u32 new_attib_count = p_dest->attrib_count + p_src->attrib_count;
-    xml_element* const new_children = jrealloc(p_dest->children, sizeof*new_children * new_child_count);
-    if (!new_children)
-    {
-        RMOD_ERROR("Failed jrealloc(%p, %zu)", p_dest->children, sizeof*new_children * new_child_count);
-        RMOD_LEAVE_FUNCTION;
-        return RMOD_RESULT_NOMEM;
-    }
-    p_dest->children = new_children;
-    if (new_attib_count)
-    {
-        string_segment* const new_attrib_names = jrealloc(p_dest->attribute_names, sizeof*new_attrib_names * new_attib_count);
-        if (!new_attib_count)
-        {
-            RMOD_ERROR("Failed jrealloc(%p, %zu)", p_dest->attribute_names, sizeof*new_attrib_names * new_attib_count);
-            RMOD_LEAVE_FUNCTION;
-            return RMOD_RESULT_NOMEM;
-        }
-        p_dest->attribute_names = new_attrib_names;
-        string_segment* const new_attrib_values = jrealloc(p_dest->attribute_names, sizeof*new_attrib_values * new_attib_count);
-        if (!new_attib_count)
-        {
-            jfree(new_attrib_names);
-            RMOD_ERROR("Failed jrealloc(%p, %zu)", p_dest->attribute_names, sizeof*new_attrib_values * new_attib_count);
-            RMOD_LEAVE_FUNCTION;
-            return RMOD_RESULT_NOMEM;
-        }
-        p_dest->attribute_values = new_attrib_values;
-        memcpy(new_attrib_names + p_dest->attrib_count, p_src->attribute_names, sizeof(*new_attrib_names) * p_src->attrib_count);
-        memcpy(new_attrib_values + p_dest->attrib_count, p_src->attribute_values, sizeof(*new_attrib_values) * p_src->attrib_count);
-        p_dest->attrib_count = new_attib_count;
-    }
-    else
-    {
-        assert(p_dest->attribute_values == NULL);
-        p_dest->attribute_values = NULL;
-        assert(p_dest->attribute_names == NULL);
-        p_dest->attribute_names = NULL;
-    }
-    //  NOTE: removing things from p_src might be unnecessary
-    memcpy(new_children + p_dest->child_count, p_src->children, sizeof(*new_children) * p_src->child_count);
-    p_dest->child_count = new_child_count;
-    jfree(p_src->children);
-    jfree(p_src->attribute_names);
-    jfree(p_src->attribute_values);
-    memset(p_src, 0, sizeof*p_src);
-    RMOD_LEAVE_FUNCTION;
-    return RMOD_RESULT_SUCCESS;
-}

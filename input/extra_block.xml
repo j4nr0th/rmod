@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<rmod>
+    <block>
+        <name>funni block</name>
+        <reliability>0.420</reliability>
+        <effect>0.3</effect>
+        <failure>normal</failure>
+    </block>
+</rmod>

@@ -16,6 +16,8 @@
 #include <wchar.h>
 #include <uchar.h>
 
+#include <stdbool.h>
+
 //  Typedefs used for the project
 typedef uint_fast64_t u64;
 typedef uint32_t u32;
@@ -34,9 +36,9 @@ typedef void u0, i0;
 #ifdef _WIN32
 typedef unsigned char char8_t;
 #endif
-typedef char8_t c8;
-typedef char16_t c16;
-typedef char32_t c32;
+typedef unsigned char c8;
+typedef uint_least16_t c16;
+typedef uint_least32_t c32;
 
 
 //  My custom memory allocation functions

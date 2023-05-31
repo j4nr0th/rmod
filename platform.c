@@ -11,7 +11,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-void* map_file_to_memory(const char* filename, u64* p_out_size)
+static void* file_to_memory(const char* filename, u64* p_out_size)
 {
     RMOD_ENTER_FUNCTION;
     static long PG_SIZE = 0;
@@ -63,7 +63,7 @@ end:
     return ptr;
 }
 
-void unmap_file(void* ptr, u64 size)
+static void file_from_memory(void* ptr, u64 size)
 {
     RMOD_ENTER_FUNCTION;
     int r = munmap(ptr, size);
@@ -72,6 +72,35 @@ void unmap_file(void* ptr, u64 size)
         RMOD_ERROR("Failed unmapping pointer %p from memory, reason: %s", ptr, RMOD_ERRNO_MESSAGE);
     }
     RMOD_LEAVE_FUNCTION;
+}
+
+
+
+rmod_result map_file_to_memory(const char* filename, rmod_memory_file* p_file_out)
+{
+    RMOD_ENTER_FUNCTION;
+    rmod_result res = RMOD_RESULT_SUCCESS;
+    if (!realpath(filename, p_file_out->name))
+    {
+        RMOD_ERROR("Could not find full path of file \"%s\", reason: %s", filename, RMOD_ERRNO_MESSAGE);
+        res = RMOD_RESULT_BAD_PATH;
+        goto end;
+    }
+
+    u64 size;
+    void* ptr = file_to_memory(filename, &size);
+    if (!ptr)
+    {
+        RMOD_ERROR("Failed mapping file to memory");
+        res = RMOD_RESULT_BAD_FILE_MAP;
+        goto end;
+    }
+
+    p_file_out->ptr = ptr;
+    p_file_out->file_size = size;
+    end:
+    RMOD_LEAVE_FUNCTION;
+    return res;
 }
 
 
@@ -117,3 +146,16 @@ void unmap_file(void* ptr, u64 size)
     RMOD_LEAVE_FUNCTION;
 }
 #endif
+
+void unmap_file(rmod_memory_file* p_file_out)
+{
+    file_from_memory(p_file_out->ptr, p_file_out->file_size);
+}
+
+bool map_file_is_named(const rmod_memory_file* f1, const char* filename)
+{
+    RMOD_ENTER_FUNCTION;
+    const bool res = strcmp(f1->name, filename) != 0;
+    RMOD_LEAVE_FUNCTION;
+    return res;
+}

@@ -7,6 +7,8 @@
         <failure>normal</failure>
     </block>
 
+    <include>extra_block.xml</include>
+
     <chain>
         <name>chain D</name>
         <first>first</first>
@@ -80,11 +82,18 @@
     <chain>
         <name>chain C</name>
         <first>only</first>
-        <last>only</last>
+        <last>you</last>
 
         <element etype="block">
             <type>block a</type>
             <label>only</label>
+            <child>you</child>
+        </element>
+
+        <element etype="block">
+            <type>funni block</type>
+            <label>you</label>
+            <parent>only</parent>
         </element>
     </chain>
 

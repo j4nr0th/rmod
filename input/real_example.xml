@@ -5,6 +5,7 @@
         <reliability>0.96</reliability>
         <effect>3.14</effect>
         <failure>critical</failure>
+        <cost>10</cost>
     </block>
 
     <block>
@@ -12,6 +13,7 @@
         <reliability>0.9</reliability>
         <effect>0.5</effect>
         <failure>normal</failure>
+        <cost>200</cost>
     </block>
 
     <chain>

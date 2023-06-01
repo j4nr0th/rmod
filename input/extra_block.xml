@@ -5,5 +5,6 @@
         <reliability>0.420</reliability>
         <effect>0.3</effect>
         <failure>normal</failure>
+        <cost>1</cost>
     </block>
 </rmod>

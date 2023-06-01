@@ -5,6 +5,7 @@
         <reliability>0.96</reliability>
         <effect>3.14</effect>
         <failure>normal</failure>
+        <cost>2</cost>
     </block>
 
     <include>extra_block.xml</include>

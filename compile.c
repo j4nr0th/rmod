@@ -692,6 +692,7 @@ rmod_result rmod_compile_graph(
             type_array[unique_types].failure_type = block_type->failure_type;
             type_array[unique_types].reliability = block_type->reliability;
             type_array[unique_types].effect = block_type->effect;
+            type_array[unique_types].cost = block_type->cost;
             unique_types += 1;
             assert(unique_types <= n_types - chain_count);
         }

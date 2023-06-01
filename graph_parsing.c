@@ -807,10 +807,11 @@ rmod_result rmod_convert_xml(
 
             }
             //  This is a block type definition
-            bool found_name = false, found_reliability = false, found_effect = false, found_failure = false;
+            bool found_name = false, found_reliability = false, found_effect = false, found_failure = false, found_cost = false;
             string_segment name_v = {};
             f32 reliability_v = 0.0f;
             f32 effect_v = 0.0f;
+            f32 cost_v = 0.0f;
             rmod_failure_type failure_type_v = RMOD_FAILURE_TYPE_NONE;
             for (u32 j = 0; j < e->child_count; ++j)
             {
@@ -920,6 +921,30 @@ rmod_result rmod_convert_xml(
                     }
                     found_failure = true;
                 }
+                else if (COMPARE_XML_TO_LITERAL(cost, &child->name))
+                {
+                    //  Failure type of the block
+                    if (found_cost)
+                    {
+                        RMOD_WARN("Duplicate \"cost\" element was found in the element in \"block\" and will be ignored");
+                        continue;
+                    }
+                    if (child->value.len == 0)
+                    {
+                        RMOD_ERROR("Element \"cost\" in the element \"block\" was empty");
+                        res = RMOD_RESULT_BAD_XML;
+                        goto failed;
+                    }
+                    char* end_pos;
+                    cost_v = strtof(child->value.begin, &end_pos);
+                    if (end_pos != child->value.begin + child->value.len)
+                    {
+                        RMOD_ERROR("Value of \"cost\" was given as \"%.*s\" in the element \"block\", which is not allowed (only a single float can be given)", child->value.len, child->value.begin);
+                        res = RMOD_RESULT_BAD_XML;
+                        goto failed;
+                    }
+                    found_cost = true;
+                }
                 else
                 {
                     RMOD_WARN("Unknown element \"%.*s\" was found in the element \"block\" and will be ignored", e->name.len, e->name.begin);
@@ -942,8 +967,12 @@ rmod_result rmod_convert_xml(
             {
                 RMOD_ERROR("Element \"block\" did not include element \"failure\"");
             }
+            if (!found_cost)
+            {
+                RMOD_ERROR("Element \"block\" did not include element \"cost\"");
+            }
 
-            if (!found_name || !found_reliability || !found_effect || !found_failure)
+            if (!found_name || !found_reliability || !found_effect || !found_failure || !found_cost)
             {
                 RMOD_ERROR("Element \"block\" was not complete");
                 res = RMOD_RESULT_BAD_XML;
@@ -981,6 +1010,7 @@ rmod_result rmod_convert_xml(
                         .effect = effect_v,
                         .failure_type = failure_type_v,
                         .reliability = reliability_v,
+                        .cost = cost_v,
                         }
                     };
         }
@@ -2000,6 +2030,11 @@ rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const r
             ENSURE_BUFFER_SPACE(64);
             usage += sprintf(buffer + usage, "%f", this->effect);
             ADD_STRING_LITERAL("</effect>\n");
+
+            ADD_STRING_LITERAL("\t\t<cost>");
+            ENSURE_BUFFER_SPACE(64);
+            usage += sprintf(buffer + usage, "%f", this->cost);
+            ADD_STRING_LITERAL("</cost>\n");
 
             ADD_STRING_LITERAL("\t\t<failure>");
             ENSURE_BUFFER_SPACE(64);

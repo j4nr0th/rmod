@@ -8,7 +8,7 @@
         <cost>2</cost>
     </block>
 
-    <include>extra_block.xml</include>
+    <include>../input2/extra_block.xml</include>
 
     <chain>
         <name>chain D</name>

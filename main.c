@@ -2,6 +2,7 @@
 #include "graph_parsing.h"
 #include "compile.h"
 #include "program.h"
+#include "random/acorn.h"
 #include <inttypes.h>
 #include <stdio.h>
 
@@ -97,6 +98,17 @@ int main()
         }
     }
 
+    rmod_acorn_state* acorn;
+    res = acorn_rng_create(60, 30, &acorn);
+    assert(res == RMOD_RESULT_SUCCESS);
+    res = acorn_rng_seed(acorn, 120489127091121);
+    assert(res == RMOD_RESULT_SUCCESS);
+    for (u32 i = 0; i < 100; ++i)
+    {
+        printf("ACORN gave us: %g\n", acorn_rngf(acorn));
+    }
+    res = acorn_rng_destroy(acorn);
+    assert(res == RMOD_RESULT_SUCCESS);
 
     {
         jallocator* const jallocator = G_JALLOCATOR;

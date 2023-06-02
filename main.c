@@ -6,8 +6,6 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-jallocator* G_JALLOCATOR;
-linear_jallocator* G_LIN_JALLOCATOR;
 
 static i32 error_hook(const char* thread_name, u32 stack_trace_count, const char*const* stack_trace, rmod_error_level level, u32 line, const char* file, const char* function, const char* message, void* param)
 {

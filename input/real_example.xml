@@ -2,7 +2,7 @@
 <rmod>
     <block>
         <name>pump</name>
-        <reliability>0.96</reliability>
+        <mtbf>0.96</mtbf>
         <effect>3.14</effect>
         <failure>critical</failure>
         <cost>10</cost>
@@ -10,7 +10,7 @@
 
     <block>
         <name>refinery</name>
-        <reliability>0.9</reliability>
+        <mtbf>0.9</mtbf>
         <effect>0.5</effect>
         <failure>normal</failure>
         <cost>200</cost>

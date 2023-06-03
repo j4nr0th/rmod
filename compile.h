@@ -21,7 +21,7 @@ typedef struct rmod_graph_node_type_struct rmod_graph_node_type;
 struct rmod_graph_node_type_struct
 {
     c8* name;
-    f32 reliability;
+    f32 failure_rate;
     f32 effect;
     f32 cost;
     rmod_failure_type failure_type;

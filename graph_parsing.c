@@ -807,9 +807,9 @@ rmod_result rmod_convert_xml(
 
             }
             //  This is a block type definition
-            bool found_name = false, found_reliability = false, found_effect = false, found_failure = false, found_cost = false;
+            bool found_name = false, found_mtbf = false, found_effect = false, found_failure = false, found_cost = false;
             string_segment name_v = {};
-            f32 reliability_v = 0.0f;
+            f32 mtbf_v = 0.0f;
             f32 effect_v = 0.0f;
             f32 cost_v = 0.0f;
             rmod_failure_type failure_type_v = RMOD_FAILURE_TYPE_NONE;
@@ -833,35 +833,35 @@ rmod_result rmod_convert_xml(
                     name_v = child->value;
                     found_name = true;
                 }
-                else if (COMPARE_XML_TO_LITERAL(reliability, &child->name))
+                else if (COMPARE_XML_TO_LITERAL(mtbf, &child->name))
                 {
                     //  Reliability of the block
-                    if (found_reliability)
+                    if (found_mtbf)
                     {
-                        RMOD_WARN("Duplicate \"reliability\" element was found in the element in \"block\" and will be ignored");
+                        RMOD_WARN("Duplicate \"mtbf\" element was found in the element in \"block\" and will be ignored");
                         continue;
                     }
                     if (child->value.len == 0)
                     {
-                        RMOD_ERROR("Element \"reliability\" in the element \"block\" was empty");
+                        RMOD_ERROR("Element \"mtbf\" in the element \"block\" was empty");
                         res = RMOD_RESULT_BAD_XML;
                         goto failed;
                     }
                     char* end_pos;
-                    reliability_v = strtof(child->value.begin, &end_pos);
+                    mtbf_v = strtof(child->value.begin, &end_pos);
                     if (end_pos != child->value.begin + child->value.len)
                     {
-                        RMOD_ERROR("Value of \"reliability\" was given as \"%.*s\" in the element \"block\", which is not allowed (only a single float in range (0, 1] can be given)", child->value.len, child->value.begin);
+                        RMOD_ERROR("Value of \"mtbf\" was given as \"%.*s\" in the element \"block\", which is not allowed (only a single positive float can be given)", child->value.len, child->value.begin);
                         res = RMOD_RESULT_BAD_XML;
                         goto failed;
                     }
-                    if (reliability_v <= 0.0f || reliability_v > 1.0f)
+                    if (mtbf_v < 0.0f)
                     {
-                        RMOD_ERROR("Value of \"reliability\" was given as \"%g\" in the element \"block\", which is not outside of the allowed range (0, 1]", reliability_v);
+                        RMOD_ERROR("Value of \"mtbf\" was given as \"%g\" in the element \"block\", which is must be positive", mtbf_v);
                         res = RMOD_RESULT_BAD_XML;
                         goto failed;
                     }
-                    found_reliability = true;
+                    found_mtbf = true;
                 }
                 else if (COMPARE_XML_TO_LITERAL(effect, &child->name))
                 {
@@ -955,9 +955,9 @@ rmod_result rmod_convert_xml(
             {
                 RMOD_ERROR("Element \"block\" did not include element \"name\"");
             }
-            if (!found_reliability)
+            if (!found_mtbf)
             {
-                RMOD_ERROR("Element \"block\" did not include element \"reliability\"");
+                RMOD_ERROR("Element \"block\" did not include element \"mtbf\"");
             }
             if (!found_effect)
             {
@@ -972,7 +972,7 @@ rmod_result rmod_convert_xml(
                 RMOD_ERROR("Element \"block\" did not include element \"cost\"");
             }
 
-            if (!found_name || !found_reliability || !found_effect || !found_failure || !found_cost)
+            if (!found_name || !found_mtbf || !found_effect || !found_failure || !found_cost)
             {
                 RMOD_ERROR("Element \"block\" was not complete");
                 res = RMOD_RESULT_BAD_XML;
@@ -1009,7 +1009,7 @@ rmod_result rmod_convert_xml(
                         .header = { .type_value = RMOD_ELEMENT_TYPE_BLOCK, .type_name = name_v },
                         .effect = effect_v,
                         .failure_type = failure_type_v,
-                        .reliability = reliability_v,
+                        .mtbf = mtbf_v,
                         .cost = cost_v,
                         }
                     };
@@ -2021,10 +2021,10 @@ rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const r
             ADD_STRING_SEGMENT(this->header.type_name);
             ADD_STRING_LITERAL("</name>\n");
 
-            ADD_STRING_LITERAL("\t\t<reliability>");
+            ADD_STRING_LITERAL("\t\t<mtbf>");
             ENSURE_BUFFER_SPACE(64);
-            usage += sprintf(buffer + usage, "%f", this->reliability);
-            ADD_STRING_LITERAL("</reliability>\n");
+            usage += sprintf(buffer + usage, "%f", this->mtbf);
+            ADD_STRING_LITERAL("</mtbf>\n");
 
             ADD_STRING_LITERAL("\t\t<effect>");
             ENSURE_BUFFER_SPACE(64);

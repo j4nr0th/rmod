@@ -11,7 +11,7 @@ list(APPEND ERR_HEADER_FILES err/error_codes.h err/error_stack.h)
 list(APPEND RMOD_SOURCE_FILES graph_parsing.c compile.c platform.c program.c random/acorn.c common.c)
 list(APPEND RMOD_HEADER_FILES rmod.h graph_parsing.h compile.h common.h program.h random/acorn.h)
 
-add_executable(rmod main.c ${JALLOC_SOURCE_FILES} ${JALLOC_HEADER_FILES} ${ERR_SOURCE_FILES} ${ERR_HEADER_FILES} ${RMOD_SOURCE_FILES} ${RMOD_HEADER_FILES})
+add_executable(rmod main.c ${JALLOC_SOURCE_FILES} ${JALLOC_HEADER_FILES} ${ERR_SOURCE_FILES} ${ERR_HEADER_FILES} ${RMOD_SOURCE_FILES} ${RMOD_HEADER_FILES} simulation_run.c simulation_run.h)
 
 enable_testing()
 add_subdirectory(random)

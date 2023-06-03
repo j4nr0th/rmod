@@ -48,7 +48,7 @@ typedef struct rmod_block_struct rmod_block;
 struct rmod_block_struct
 {
     rmod_element_type_header header;
-    f32 reliability;
+    f32 mtbf;
     f32 effect;
     f32 cost;
     rmod_failure_type failure_type;

@@ -4,7 +4,7 @@
     <include>../input/chain_dependence_test.xml</include>
     <block>
         <name>funni block</name>
-        <reliability>0.420</reliability>
+        <mtbf>0.420</mtbf>
         <effect>0.3</effect>
         <failure>normal</failure>
         <cost>1</cost>

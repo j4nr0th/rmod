@@ -12,7 +12,7 @@
         <name>refinery</name>
         <mtbf>0.9</mtbf>
         <effect>0.5</effect>
-        <failure>normal</failure>
+        <failure>critical</failure>
         <cost>200</cost>
     </block>
     <!--  a really sick comment- -> <  -->

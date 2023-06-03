@@ -3,6 +3,7 @@
 #include "compile.h"
 #include "program.h"
 #include "random/acorn.h"
+#include "simulation_run.h"
 #include <inttypes.h>
 #include <stdio.h>
 
@@ -71,7 +72,7 @@ int main()
     assert(res == RMOD_RESULT_SUCCESS);
     printf("Serialized types before compilation:\n%s\n\n", text);
     lin_jfree(G_LIN_JALLOCATOR, text);
-    res = rmod_compile(&program, &graph_a, "chain A", "master");
+    res = rmod_compile(&program, &graph_a, "master", "main module");
     assert(res == RMOD_RESULT_SUCCESS);
 
     res = rmod_serialize_types(G_LIN_JALLOCATOR, program.n_types, program.p_types, &text);
@@ -79,10 +80,31 @@ int main()
     printf("Serialized types after compilation:\n%s\n\n", text);
     lin_jfree(G_LIN_JALLOCATOR, text);
 
+    rmod_acorn_state* rng;
+    res = acorn_rng_create(60, 10, &rng);
+    assert(res == RMOD_RESULT_SUCCESS);
+    res = acorn_rng_seed(rng, 1290412412049941LLu);
+    assert(res == RMOD_RESULT_SUCCESS);
+
+
+    rmod_sim_result results = {};
+    res = rmod_simulate_graph(rng, &graph_a, 10, 100000, &results);
+    assert(res == RMOD_RESULT_SUCCESS);
+
+    printf("Simulation results (took %g s for %lu runs, or %g s per run):\n\tAvg flow: %g\n\tAvg failures: %g\n\tAvg costs: %g\n", results.duration, results.sim_count, (f64)results.duration / (f64)results.sim_count, (f64)(results.total_flow)/(f64)results.sim_count, (f64)(results.total_failures)/(f64)results.sim_count, (f64)(results.total_costs)/(f64)results.sim_count);
+
+    printf("Failures per component:\n");
+    for (u32 i = 0; i < results.n_components; ++i)
+    {
+        printf("\t%u: %u\n", i, results.failures_per_component[i]);
+    }
+    jfree(results.failures_per_component);
+
+    res = acorn_rng_destroy(rng);
+    assert(res == RMOD_RESULT_SUCCESS);
     rmod_destroy_graph(&graph_a);
     rmod_program_delete(&program);
 
-//    rmod_destroy_graph(&graph_a);
     assert(jallocator_verify(G_JALLOCATOR, NULL, NULL) == 0);
     uint_fast32_t forgotten_indices[128];
     uint_fast32_t r = jallocator_count_used_blocks(G_JALLOCATOR, 128, forgotten_indices);
@@ -95,18 +117,6 @@ int main()
             printf("\tAllocation of idx: %"PRIuFAST32"\n", forgotten_indices[i]);
         }
     }
-
-    rmod_acorn_state* acorn;
-    res = acorn_rng_create(60, 30, &acorn);
-    assert(res == RMOD_RESULT_SUCCESS);
-    res = acorn_rng_seed(acorn, 120489127091121);
-    assert(res == RMOD_RESULT_SUCCESS);
-    for (u32 i = 0; i < 100; ++i)
-    {
-        printf("ACORN gave us: %g\n", acorn_rngf(acorn));
-    }
-    res = acorn_rng_destroy(acorn);
-    assert(res == RMOD_RESULT_SUCCESS);
 
     {
         jallocator* const jallocator = G_JALLOCATOR;

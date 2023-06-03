@@ -18,9 +18,13 @@ enum rmod_element_status_enum
 typedef struct rmod_sim_result_struct rmod_sim_result;
 struct rmod_sim_result_struct
 {
-    u32 sim_count;
-    f32 avg_flow;
-    f32 avg_fail_count;
+    u64 sim_count;
+    f32 total_flow;
+    u64 total_failures;
+    f32 total_costs;
+    f32 duration;
+    u32 n_components;
+    u32* failures_per_component;
 };
 
 rmod_result rmod_simulate_graph(rmod_acorn_state* acorn, const rmod_graph* graph, f32 sim_time, u32 sim_times, rmod_sim_result* p_res_out);

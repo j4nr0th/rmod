@@ -1805,6 +1805,22 @@ rmod_result rmod_convert_xml(
                     *pp_files = new_ptr;
                 }
 
+                //  For all elements in new chains update their type ids, since they need to be shifted
+                for (u32 k = 0; k < n_new_types; ++k)
+                {
+                    const rmod_element_type* type = p_new_types + k;
+                    if (type->header.type_value == RMOD_ELEMENT_TYPE_BLOCK)
+                    {
+                        continue;
+                    }
+                    const rmod_chain* chain = &type->chain;
+                    for (u32 l = 0; l < chain->element_count; ++l)
+                    {
+                        rmod_chain_element* const element = chain->chain_elements + l;
+                        element->type_id += type_count;
+                    }
+                }
+
                 memcpy(types + type_count, p_new_types, sizeof(*types) * n_new_types);
                 type_count += n_new_types;
                 jfree(p_new_types);

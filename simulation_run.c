@@ -4,9 +4,9 @@
 
 #include "simulation_run.h"
 
-static inline f32 find_next_failure(rmod_acorn_state* acorn, f32 failure_rate)
+static inline f32 find_next_failure(f64 (* rng_function)(void* param), void* rng_param, f32 failure_rate)
 {
-    return (f32)(- log(1.0 - acorn_rngf(acorn)) / (f64)failure_rate);
+    return (f32)(- log(1.0 - rng_function(rng_param)) / (f64)failure_rate);
 }
 
 static f32 find_system_throughput(
@@ -37,7 +37,9 @@ static f32 find_system_throughput(
     return value[count - 1];
 }
 
-rmod_result rmod_simulate_graph(rmod_acorn_state* const acorn, const rmod_graph* const graph, const f32 sim_time, const u32 sim_times, rmod_sim_result* const p_res_out)
+rmod_result rmod_simulate_graph(
+        const rmod_graph* graph, f32 sim_time, u32 sim_times, rmod_sim_result* p_res_out,
+        f64 (* rng_function)(void* param), void* rng_param)
 {
     RMOD_ENTER_FUNCTION;
     rmod_result res = RMOD_RESULT_SUCCESS;
@@ -179,7 +181,7 @@ rmod_result rmod_simulate_graph(rmod_acorn_state* const acorn, const rmod_graph*
         while (time < sim_time)
         {
             //  Find time step
-            f32 dt = find_next_failure(acorn, system_failure_rate);
+            f32 dt = find_next_failure(rng_function, rng_param, system_failure_rate);
             f32 next_t = time + dt;
             if (next_t > sim_time)
             {
@@ -195,7 +197,7 @@ rmod_result rmod_simulate_graph(rmod_acorn_state* const acorn, const rmod_graph*
             //  Find which failure occurs next
             u32 fail_idx = 0;
             f32 failed_so_far = 0.0f;
-            const f32 fail_measure = (f32) acorn_rngf(acorn) * system_failure_rate;
+            const f32 fail_measure = (f32) rng_function(rng_param) * system_failure_rate;
             for (u32 i = 0; i < count; ++i)
             {
                 if (status[i] != RMOD_ELEMENT_STATUS_WORK)

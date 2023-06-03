@@ -2,7 +2,8 @@
 #include "graph_parsing.h"
 #include "compile.h"
 #include "program.h"
-#include "random/acorn.h"
+//#include "random/acorn.h"
+#include "random/msws.h"
 #include "simulation_run.h"
 #include <inttypes.h>
 #include <stdio.h>
@@ -51,6 +52,11 @@ static void print_xml_element(const xml_element * e, const u32 depth)
     printf("</%.*s>\n", e->name.len, e->name.begin);
 }
 
+static f64 rng_callback_function(void* param)
+{
+    return rmod_msws_rngf(param);
+}
+
 int main()
 {
     //  Main function of the RMOD program
@@ -80,15 +86,11 @@ int main()
     printf("Serialized types after compilation:\n%s\n\n", text);
     lin_jfree(G_LIN_JALLOCATOR, text);
 
-    rmod_acorn_state* rng;
-    res = acorn_rng_create(60, 10, &rng);
-    assert(res == RMOD_RESULT_SUCCESS);
-    res = acorn_rng_seed(rng, 1290412412049941LLu);
-    assert(res == RMOD_RESULT_SUCCESS);
-
+    rmod_msws_state rng;
+    rmod_msws_init(&rng);
 
     rmod_sim_result results = {};
-    res = rmod_simulate_graph(rng, &graph_a, 10, 100000, &results);
+    res = rmod_simulate_graph(&graph_a, 10, 1000000, &results, rng_callback_function, &rng);
     assert(res == RMOD_RESULT_SUCCESS);
 
     printf("Simulation results (took %g s for %lu runs, or %g s per run):\n\tAvg flow: %g\n\tAvg failures: %g\n\tAvg costs: %g\n", results.duration, results.sim_count, (f64)results.duration / (f64)results.sim_count, (f64)(results.total_flow)/(f64)results.sim_count, (f64)(results.total_failures)/(f64)results.sim_count, (f64)(results.total_costs)/(f64)results.sim_count);
@@ -100,8 +102,6 @@ int main()
     }
     jfree(results.failures_per_component);
 
-    res = acorn_rng_destroy(rng);
-    assert(res == RMOD_RESULT_SUCCESS);
     rmod_destroy_graph(&graph_a);
     rmod_program_delete(&program);
 

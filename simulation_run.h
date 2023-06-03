@@ -6,7 +6,7 @@
 #define RMOD_SIMULATION_RUN_H
 #include "rmod.h"
 #include "compile.h"
-#include "random/acorn.h"
+//#include "random/acorn.h"
 
 typedef enum rmod_element_status_enum rmod_element_status;
 enum rmod_element_status_enum
@@ -27,6 +27,8 @@ struct rmod_sim_result_struct
     u32* failures_per_component;
 };
 
-rmod_result rmod_simulate_graph(rmod_acorn_state* acorn, const rmod_graph* graph, f32 sim_time, u32 sim_times, rmod_sim_result* p_res_out);
+rmod_result rmod_simulate_graph(
+        const rmod_graph* graph, f32 sim_time, u32 sim_times, rmod_sim_result* p_res_out,
+        f64 (* rng_function)(void* param), void* rng_param);
 
 #endif //RMOD_SIMULATION_RUN_H

@@ -2,4 +2,6 @@
 <config>
     <sim_time>10</sim_time>
     <sim_reps>60000</sim_reps>
+    <filename>chain_dependence_test.xml</filename>
+    <chain>master</chain>
 </config>

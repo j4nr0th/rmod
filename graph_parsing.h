@@ -5,7 +5,7 @@
 #ifndef RMOD_GRAPH_PARSING_H
 #define RMOD_GRAPH_PARSING_H
 #include "rmod.h"
-#include <stdbool.h>
+#include "parsing_base.h"
 
 typedef enum rmod_failure_type_enum rmod_failure_type;
 enum rmod_failure_type_enum
@@ -29,13 +29,6 @@ enum rmod_element_type_enum
 };
 
 const char* rmod_element_type_value_to_str(rmod_element_type_value value);
-
-typedef struct string_segment_struct string_segment;
-struct string_segment_struct
-{
-    const char* begin;
-    u32 len;
-};
 
 typedef struct rmod_element_type_header_struct rmod_element_type_header;
 struct rmod_element_type_header_struct
@@ -88,33 +81,10 @@ union rmod_element_type_union
     rmod_block block;
 };
 
-typedef struct xml_element_struct xml_element;
-struct xml_element_struct
-{
-    u32 depth;
-    string_segment name;
-    u32 attrib_capacity;
-    u32 attrib_count;
-    string_segment* attribute_names;
-    string_segment* attribute_values;
-    u32 child_count;
-    u32 child_capacity;
-    xml_element* children;
-    string_segment value;
-};
 
-rmod_result
-rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const rmod_element_type* types, char** p_out);
+rmod_result rmod_convert_xml(const rmod_xml_element* root, u32* p_file_count, u32* p_file_capacity, rmod_memory_file** pp_files, u32* pn_types, rmod_element_type** pp_types);
 
-rmod_result rmod_parse_xml(const rmod_memory_file* mem_file, xml_element* p_root);
-
-rmod_result rmod_release_xml(xml_element* root);
-
-rmod_result rmod_serialize_xml(xml_element* root, FILE* f_out);
-
-rmod_result rmod_convert_xml(
-        xml_element* root, u32* p_file_count, u32* p_file_capacity, rmod_memory_file** pp_files, u32* pn_types,
-        rmod_element_type** pp_types);
+rmod_result rmod_serialize_types(linear_jallocator* allocator, u32 type_count, const rmod_element_type* types, char** p_out);
 
 rmod_result rmod_destroy_types(u32 n_types, rmod_element_type* types);
 

@@ -8,6 +8,7 @@
 #ifndef RMOD_MSWS_H
 #define RMOD_MSWS_H
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef struct rmod_msws_state_struct rmod_msws_state;
 struct rmod_msws_state_struct

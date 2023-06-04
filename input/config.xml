@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<config>
+    <sim_time>10</sim_time>
+    <sim_reps>60000</sim_reps>
+</config>

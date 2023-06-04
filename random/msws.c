@@ -3,6 +3,7 @@
 //
 
 #include "msws.h"
+#include <assert.h>
 
 void rmod_msws_init(rmod_msws_state* rng)
 {

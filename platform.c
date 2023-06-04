@@ -76,7 +76,7 @@ static void file_from_memory(void* ptr, u64 size)
 
 
 
-rmod_result map_file_to_memory(const char* filename, rmod_memory_file* p_file_out)
+rmod_result rmod_map_file_to_memory(const char* filename, rmod_memory_file* p_file_out)
 {
     RMOD_ENTER_FUNCTION;
     rmod_result res = RMOD_RESULT_SUCCESS;
@@ -147,7 +147,7 @@ void unmap_file(void* ptr, u64 size)
 }
 #endif
 
-void unmap_file(rmod_memory_file* p_file_out)
+void rmod_unmap_file(rmod_memory_file* p_file_out)
 {
     file_from_memory(p_file_out->ptr, p_file_out->file_size);
 }

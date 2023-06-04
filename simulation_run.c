@@ -6,10 +6,11 @@
 
 static inline f32 find_next_failure(f64 (* rng_function)(void* param), void* rng_param, f32 failure_rate)
 {
-    return (f32)(- log(1.0 - rng_function(rng_param)) / (f64)failure_rate);
+//    return (f32)(- log(1.0 - rng_function(rng_param)) / (f64)failure_rate);
+    return -(f32)log(1.0 - rng_function(rng_param)) / (f32)failure_rate;
 }
 
-static f32 find_system_throughput(
+static inline f32 find_system_throughput(
         f32*const sys_failure, const u32 count, const rmod_element_status* const status, const u32* const parent_count,
         const rmod_graph_node_id* const* const parent_array, const f32* const effect, f32* value,
         const f32* const failure_rate)

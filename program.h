@@ -6,6 +6,7 @@
 #define RMOD_PROGRAM_H
 #include "graph_parsing.h"
 #include "compile.h"
+#include "parsing_base.h"
 
 typedef struct rmod_program_struct rmod_program;
 struct rmod_program_struct
@@ -14,7 +15,9 @@ struct rmod_program_struct
     rmod_element_type* p_types;
     u32 n_files;
     rmod_memory_file* mem_files;
-    xml_element xml_root;
+    rmod_xml_element xml_root;
+    u32 n_char_buffers;
+    char** p_char_buffers;
 };
 
 rmod_result rmod_program_create(const char* file_name, rmod_program* p_program);

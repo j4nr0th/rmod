@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <libgen.h>
 #include "program.h"
+#include "parsing_base.h"
 
 rmod_result rmod_program_create(const char* file_name, rmod_program* p_program)
 {
@@ -44,7 +45,7 @@ rmod_result rmod_program_create(const char* file_name, rmod_program* p_program)
         res = RMOD_RESULT_NOMEM;
         goto end;
     }
-    res = map_file_to_memory(name_path_buffer, mem_file_array + 0);
+    res = rmod_map_file_to_memory(name_path_buffer, mem_file_array + 0);
     if (res != RMOD_RESULT_SUCCESS)
     {
         jfree(mem_file_array);
@@ -53,11 +54,11 @@ rmod_result rmod_program_create(const char* file_name, rmod_program* p_program)
         goto end;
     }
 
-    xml_element file_root;
+    rmod_xml_element file_root;
     res = rmod_parse_xml(mem_file_array + 0, &file_root);
     if (res != RMOD_RESULT_SUCCESS)
     {
-        unmap_file(mem_file_array + 0);
+        rmod_unmap_file(mem_file_array + 0);
         jfree(mem_file_array);
         chdir(prev_wd);
         RMOD_ERROR("Failed mapping base file \"%s\" to memory, reason: %s", name_path_buffer, RMOD_ERRNO_MESSAGE);
@@ -72,12 +73,21 @@ rmod_result rmod_program_create(const char* file_name, rmod_program* p_program)
     {
         for (u32 i = 0; i < file_count; ++i)
         {
-            unmap_file(mem_file_array + i);
+            rmod_unmap_file(mem_file_array + i);
         }
         jfree(mem_file_array);
         chdir(prev_wd);
         RMOD_ERROR("Failed conversion of base xml to program");
         goto end;
+    }
+
+    u32 chain_count = 0;
+    for (u32 i = 0; i < n_types; ++i)
+    {
+        if (p_types[i].header.type_value == RMOD_ELEMENT_TYPE_CHAIN)
+        {
+            chain_count += 1;
+        }
     }
 
     {
@@ -103,13 +113,30 @@ rmod_result rmod_program_create(const char* file_name, rmod_program* p_program)
         }
     }
 
-    *p_program = (rmod_program){
-        .p_types = p_types,
-        .n_types = n_types,
-        .mem_files = mem_file_array,
-        .n_files = file_count,
-        .xml_root = file_root,
+    rmod_program return_value = (rmod_program) {
+            .p_types = p_types,
+            .n_types = n_types,
+            .mem_files = mem_file_array,
+            .n_files = file_count,
+            .xml_root = file_root,
+            .n_char_buffers = 0,
+            .p_char_buffers = NULL,
     };
+
+    if (chain_count > 1)
+    {
+        char** const char_buffers = jalloc(sizeof(*char_buffers) * (chain_count - 1));
+        if (!char_buffers)
+        {
+            RMOD_ERROR("Failed jalloc(%zu)", sizeof(*char_buffers) * (chain_count - 1));
+            res = RMOD_RESULT_NOMEM;
+            rmod_program_delete(&return_value);
+            goto end;
+        }
+        memset(char_buffers, 0, sizeof(*char_buffers) * (chain_count - 1));
+        return_value.p_char_buffers = char_buffers;
+    }
+    *p_program = return_value;
 
 end:
     RMOD_LEAVE_FUNCTION;
@@ -119,11 +146,16 @@ end:
 rmod_result rmod_program_delete(rmod_program* program)
 {
     RMOD_ENTER_FUNCTION;
+    for (u32 i = 0; i < program->n_char_buffers; ++i)
+    {
+        jfree(program->p_char_buffers[i]);
+    }
+    jfree(program->p_char_buffers);
     rmod_release_xml(&program->xml_root);
     rmod_destroy_types(program->n_types, program->p_types);
     for (u32 i = 0; i < program->n_files; ++i)
     {
-        unmap_file(program->mem_files + i);
+        rmod_unmap_file(program->mem_files + i);
     }
     memset(program->mem_files, 0, sizeof(*program->mem_files) * program->n_files);
     jfree(program->mem_files);

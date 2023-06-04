@@ -2,11 +2,12 @@
 #include "graph_parsing.h"
 #include "compile.h"
 #include "program.h"
-//#include "random/acorn.h"
 #include "random/msws.h"
 #include "simulation_run.h"
+#include "parsing_base.h"
 #include <inttypes.h>
 #include <stdio.h>
+#include "config_parsing.h"
 
 
 static i32 error_hook(const char* thread_name, u32 stack_trace_count, const char*const* stack_trace, rmod_error_level level, u32 line, const char* file, const char* function, const char* message, void* param)
@@ -16,7 +17,7 @@ static i32 error_hook(const char* thread_name, u32 stack_trace_count, const char
     return 0;
 }
 
-static void print_xml_element(const xml_element * e, const u32 depth)
+static void print_xml_element(const rmod_xml_element * e, const u32 depth)
 {
     for (u32 i = 0; i < depth; ++i)
         putchar('\t');
@@ -57,20 +58,68 @@ static f64 rng_callback_function(void* param)
     return rmod_msws_rngf(param);
 }
 
+typedef struct
+{
+    u32* p_out;
+    u32 min_v;
+    u32 max_v;
+} uint32_conversion_params;
+
+static bool convert_to_uint32(const string_segment value, void* const p_out)
+{
+    const uint32_conversion_params* const p_conv = p_out;
+    char* end_pos = NULL;
+    const uintmax_t v = strtoumax(value.begin, &end_pos, 10);
+    if (end_pos != value.begin + value.len)
+    {
+        RMOD_ERROR("Failed conversion to uint32 due to invalid value: \"%.*s\"", value.len, value.begin);
+        return false;
+    }
+    if (v < p_conv->min_v || v > p_conv->max_v)
+    {
+        RMOD_ERROR("Failed conversion to uint32 due to value \"%.*s\" outside of allowed range [%u, %u]", value.len, value.begin, p_conv->min_v, p_conv->max_v);
+        return false;
+    }
+    *p_conv->p_out = v;
+
+    return true;
+}
+
 int main()
 {
     //  Main function of the RMOD program
     rmod_error_init_thread("master", RMOD_ERROR_LEVEL_NONE, 128, 128);
     RMOD_ENTER_FUNCTION;
     rmod_error_set_hook(error_hook, NULL);
-
+    rmod_result res;
     G_JALLOCATOR = jallocator_create((1 << 20), (1 << 19), 2);
 
     G_LIN_JALLOCATOR = lin_jallocator_create((1 << 20));
 
+    u32 sim_time;
+    u32 sim_reps;
+    uint32_conversion_params conv_sim_time = {.p_out = &sim_time, .min_v = 1, .max_v = 100};
+    uint32_conversion_params conv_sim_reps = {.p_out = &sim_reps, .min_v = 1, .max_v = 1000000};
+    const rmod_config_entry config_children[] =  {
+            {.name = "sim_time", .child_count = 0, .converter_fn = convert_to_uint32, .p_out = &conv_sim_time},
+            {.name = "sim_reps", .child_count = 0, .converter_fn = convert_to_uint32, .p_out = &conv_sim_reps},
+
+    };
+    const rmod_config_entry config_master =
+            {
+            .name = "config",
+            .child_count = 2,
+            .child_array = config_children,
+            };
+
+    rmod_memory_file cfg_file;
+    res = rmod_parse_configuration_file("../input/config.xml", &config_master, &cfg_file);
+    assert(res == RMOD_RESULT_SUCCESS);
+    rmod_unmap_file(&cfg_file);
+
 
     rmod_program program;
-    rmod_result res = rmod_program_create("../input/chain_dependence_test.xml", &program);
+    res = rmod_program_create("../input/chain_dependence_test.xml", &program);
     assert(res == RMOD_RESULT_SUCCESS);
     rmod_graph graph_a;
     char* text;

@@ -21,9 +21,9 @@ struct rmod_memory_file_struct
 #endif
 };
 
-rmod_result map_file_to_memory(const char* filename, rmod_memory_file* p_file_out);
+rmod_result rmod_map_file_to_memory(const char* filename, rmod_memory_file* p_file_out);
 
-void unmap_file(rmod_memory_file* p_file_out);
+void rmod_unmap_file(rmod_memory_file* p_file_out);
 
 bool map_file_is_named(const rmod_memory_file* f1, const char* filename);
 

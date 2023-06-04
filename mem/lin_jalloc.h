@@ -30,7 +30,7 @@ void lin_jfree(linear_jallocator* allocator, void* ptr);
 
 void* lin_jalloc(linear_jallocator* allocator, uint_fast64_t size);
 
-void lin_jallocator_destroy(linear_jallocator* allocator);
+uint_fast64_t lin_jallocator_destroy(linear_jallocator* allocator);
 
 void* lin_jalloc_get_current(linear_jallocator* allocator);
 

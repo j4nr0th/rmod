@@ -119,7 +119,7 @@ jallocator* jallocator_create(uint_fast64_t pool_size, uint_fast64_t malloc_limi
     return this;
 }
 
-void jallocator_destroy(jallocator* allocator)
+uint_fast64_t jallocator_destroy(jallocator* allocator)
 {
     for (uint_fast32_t i = 0; i < allocator->count; ++i)
     {
@@ -135,6 +135,7 @@ void jallocator_destroy(jallocator* allocator)
     free(allocator->pools);
     memset(allocator, 0, sizeof(*allocator));
     free(allocator);
+    return 0;
 }
 
 static inline uint_fast64_t round_up_size(uint_fast64_t size)

@@ -12,7 +12,7 @@ jallocator* jallocator_create(uint_fast64_t pool_size, uint_fast64_t malloc_limi
 
 int jallocator_verify(jallocator* allocator, int_fast32_t* i_pool, int_fast32_t* i_block);
 
-void jallocator_destroy(jallocator* allocator);
+uint_fast64_t jallocator_destroy(jallocator* allocator);
 
 void* jalloc(jallocator* allocator, uint_fast64_t size);
 

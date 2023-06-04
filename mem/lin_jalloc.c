@@ -20,9 +20,10 @@ struct linear_jallocator_struct
     void* max;
     void* base;
     void* current;
+    void* peek;
 };
 
-void lin_jallocator_destroy(linear_jallocator* allocator)
+uint_fast64_t lin_jallocator_destroy(linear_jallocator* allocator)
 {
     linear_jallocator* this = (linear_jallocator*)allocator;
 #ifndef _WIN32
@@ -32,7 +33,9 @@ void lin_jallocator_destroy(linear_jallocator* allocator)
     WINBOOL res = VirtualFree(this->base, 0, MEM_RELEASE);
     assert(res != 0);
 #endif
+    const uint_fast64_t ret_v = this->peek - this->base;
     free(this);
+    return ret_v;
 }
 
 void* lin_jalloc(linear_jallocator* allocator, uint_fast64_t size)
@@ -55,6 +58,10 @@ void* lin_jalloc(linear_jallocator* allocator, uint_fast64_t size)
 #ifndef NDEBUG
     memset(ret, 0xCC, size);
 #endif
+    if (this->current > this->peek)
+    {
+        this->peek = this->current;
+    }
     return ret;
 }
 
@@ -120,6 +127,11 @@ void* lin_jrealloc(linear_jallocator* allocator, void* ptr, uint_fast64_t new_si
         }
 #endif
         this->current = new_bottom;
+
+        if (this->current > this->peek)
+        {
+            this->peek = this->current;
+        }
         return ptr;
     }
     //  ptr was not from this allocator, so assume it was malloced and just pass it on to realloc
@@ -156,6 +168,7 @@ linear_jallocator* lin_jallocator_create(uint_fast64_t total_size)
     }
     this->base = mem;
     this->current = mem;
+    this->peek = mem;
     this->max = mem + total_size;
 
     return this;

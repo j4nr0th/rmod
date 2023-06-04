@@ -161,9 +161,33 @@ rmod_result rmod_simulate_graph(
 #else
 #error NOT IMPLEMENTED
 #endif
-
+    const u32 milestones[10] = {0, sim_times / 10, sim_times / 5, sim_times / 5 + sim_times / 10, sim_times / 5 * 2, sim_times / 2, sim_times / 2 + sim_times / 10, sim_times / 2 + sim_times / 5, sim_times / 2 + sim_times / 5 + sim_times / 10, sim_times / 2 + 2 * sim_times / 5};
+    u32 milestone = 0;
+    fprintf(stdout, "Sim progress (  0.0 %%): [------------------------------]");
+    fflush(stdout);
     for (u32 sim_i = 0; sim_i < sim_times; ++sim_i)
     {
+        if (sim_i == milestones[milestone])
+        {
+            fprintf(stdout, "\rSim progress (% 3.1f %%): [", (f64)sim_i / (f64)sim_times * 100);
+            u32 i;
+            for (i = 0; i < milestone; ++i)
+            {
+                fputc('=', stdout);
+                fputc('=', stdout);
+                fputc('=', stdout);
+            }
+            while (i < 10)
+            {
+                fputc('-', stdout);
+                fputc('-', stdout);
+                fputc('-', stdout);
+                i += 1;
+            }
+            fputc(']', stdout);
+            fflush(stdout);
+            milestone += 1;
+        }
         f32 system_failure_rate = 0.0f;
         f32 total_throughput = 0.0f;
         f32 time = 0.0f;
@@ -252,7 +276,8 @@ rmod_result rmod_simulate_graph(
     }
     results.n_components = count;
     results.failures_per_component = fails_per_component;
-
+    fprintf(stdout, "Sim progress (100.0 %%): [==============================]");
+    fflush(stdout);
 
 #ifndef _WIN32
     struct timespec t_end;
@@ -266,7 +291,7 @@ rmod_result rmod_simulate_graph(
 #else
 #error NOT IMPLEMENTED
 #endif
-
+    fprintf(stdout, "\nSim concluded in %g seconds\n", results.duration);
 
     lin_jfree(G_LIN_JALLOCATOR, status);
     lin_jfree(G_LIN_JALLOCATOR, value);

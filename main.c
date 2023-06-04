@@ -96,7 +96,15 @@ int main(int argc, const char* argv[])
         exit(EXIT_SUCCESS);
     }
     //  Main function of the RMOD program
-    rmod_error_init_thread("master", RMOD_ERROR_LEVEL_NONE, 128, 128);
+    printf("Initializing error handling and memory allocators\n");
+
+    rmod_error_init_thread("master",
+#ifndef NDEBUG
+                           RMOD_ERROR_LEVEL_NONE,
+#else
+                            RMOD_ERROR_LEVEL_WARN,
+#endif
+                           128, 128);
     RMOD_ENTER_FUNCTION;
     rmod_error_set_hook(error_hook, NULL);
     rmod_result res;
@@ -122,6 +130,7 @@ int main(int argc, const char* argv[])
             };
 
     rmod_memory_file cfg_file;
+    printf("Parsing job_desc\n");
     res = rmod_parse_configuration_file(argv[1], &config_master, &cfg_file);
     if (res != RMOD_RESULT_SUCCESS)
     {
@@ -154,6 +163,7 @@ int main(int argc, const char* argv[])
 
 
     rmod_program program;
+    printf("Creating simulation program\n");
     res = rmod_program_create(program_filename, &program);
     lin_jfree(G_LIN_JALLOCATOR, program_filename);
     if (res != RMOD_RESULT_SUCCESS)
@@ -161,6 +171,7 @@ int main(int argc, const char* argv[])
         RMOD_ERROR_CRIT("Could not create program to simulate, reason: %s", rmod_result_str(res));
     }
     rmod_graph graph_a;
+    printf("Compiling program chain to graph\n");
     res = rmod_compile(&program, &graph_a, chain_to_compile, "main module");
     if (res != RMOD_RESULT_SUCCESS)
     {
@@ -173,6 +184,7 @@ int main(int argc, const char* argv[])
     rmod_msws_init(&rng);
 
     rmod_sim_result results = {};
+    printf("Simulating graph\n");
     res = rmod_simulate_graph(&graph_a, (f32)sim_time, (u32)sim_reps, &results, rng_callback_function, &rng);
     if (res != RMOD_RESULT_SUCCESS)
     {
@@ -188,6 +200,7 @@ int main(int argc, const char* argv[])
     }
     jfree(results.failures_per_component);
 
+    printf("Cleaning up\n");
     rmod_destroy_graph(&graph_a);
     rmod_program_delete(&program);
     int_fast32_t i_pool, i_chunk;
@@ -215,9 +228,10 @@ int main(int argc, const char* argv[])
     {
         linear_jallocator* const lin_jallocator = G_LIN_JALLOCATOR;
         G_LIN_JALLOCATOR = NULL;
-        lin_jallocator_destroy(lin_jallocator);
+        printf("Peek lin_jalloc usage %zu bytes\n", lin_jallocator_destroy(lin_jallocator));
     }
     RMOD_LEAVE_FUNCTION;
     rmod_error_cleanup_thread();
+    printf("Run complete\n");
     return 0;
 }

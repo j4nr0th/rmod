@@ -145,9 +145,6 @@ void unmap_file(void* ptr, u64 size)
     jfree(ptr);
     RMOD_LEAVE_FUNCTION;
 }
-#endif
-
-
 static void file_from_memory(void* ptr, u64 size)
 {
     RMOD_ENTER_FUNCTION;
@@ -156,11 +153,6 @@ static void file_from_memory(void* ptr, u64 size)
     RMOD_LEAVE_FUNCTION;
 }
 
-
-void rmod_unmap_file(rmod_memory_file* p_file_out)
-{
-    file_from_memory(p_file_out->ptr, p_file_out->file_size);
-}
 
 bool map_file_is_named(const rmod_memory_file* f1, const char* filename)
 {
@@ -199,3 +191,11 @@ rmod_result rmod_map_file_to_memory(const char* filename, rmod_memory_file* p_fi
     return res;
 }
 
+
+#endif
+
+
+void rmod_unmap_file(rmod_memory_file* p_file_out)
+{
+    file_from_memory(p_file_out->ptr, p_file_out->file_size);
+}

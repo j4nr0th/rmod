@@ -161,7 +161,7 @@ int main(int argc, const char* argv[])
     for (u32 i = 0; i < results.n_components; ++i)
     {
         const f64 avg_fails = (f64) results.failures_per_component[i] / (f64) sim_reps;
-        printf("\t%u: %u (avg of %g, MTBF: %g)\n", i, results.failures_per_component[i], avg_fails, (f64)sim_time / avg_fails);
+        printf("\t%u: %lu (avg of %g, MTBF: %g)\n", i, results.failures_per_component[i], avg_fails, (f64)sim_time / avg_fails);
     }
     jfree(results.failures_per_component);
 

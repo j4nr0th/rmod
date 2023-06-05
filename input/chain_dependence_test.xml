@@ -4,7 +4,7 @@
         <name>block a</name>
         <mtbf>0.96</mtbf>
         <effect>3.14</effect>
-        <failure>normal</failure>
+        <failure>critical</failure>
         <cost>2</cost>
     </block>
 

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <config>
-    <sim_time>10</sim_time>
-    <sim_reps>10000</sim_reps>
+    <sim_time>100</sim_time>
+    <sim_reps>1000000</sim_reps>
     <filename>chain_dependence_test.xml</filename>
     <chain>chain A</chain>
 </config>

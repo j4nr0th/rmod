@@ -39,6 +39,7 @@ static f32 find_system_throughput(
     return value[count - 1];
 }
 
+
 rmod_result rmod_simulate_graph(
         const rmod_graph* graph, f32 sim_time, u32 sim_times, rmod_sim_result* p_res_out,
         f64 (* rng_function)(void* param), void* rng_param)
@@ -120,7 +121,7 @@ rmod_result rmod_simulate_graph(
         goto end;
     }
 
-    u32* const fails_per_component = jalloc(sizeof(*fails_per_component) * count);
+    u64* const fails_per_component = jalloc(sizeof(*fails_per_component) * count);
     if (!fails_per_component)
     {
         RMOD_ERROR("Failed jalloc(%zu)", sizeof(*fails_per_component) * count);
@@ -164,7 +165,7 @@ rmod_result rmod_simulate_graph(
     QueryPerformanceCounter(&t_begin);
 #endif
 #define N_MILESTONES 40
-    u32 milestones[N_MILESTONES] = {};
+    u32 milestones[N_MILESTONES] = {0};
     for (u32 i = 0; i < N_MILESTONES; ++i)
     {
         milestones[i] = (u32)((f64)sim_times / (f64)N_MILESTONES * (f64)i);
@@ -241,7 +242,7 @@ rmod_result rmod_simulate_graph(
             }
             assert(fail_idx < count);
             assert(fail_idx != -1);
-
+//            printf("Element %u failed\n", fail_idx);
             const rmod_failure_type type = failure[fail_idx];
             status[fail_idx] = RMOD_ELEMENT_STATUS_DOWN;
             fails_per_component[fail_idx] += 1;
@@ -278,6 +279,13 @@ rmod_result rmod_simulate_graph(
         results.total_failures += maintenance_count;
         results.sim_count += 1;
         results.total_costs += total_cost;
+//        printf("\nRun %u: ", sim_i);
+//        for (u32 i = 0; i < count; ++i)
+//        {
+//            printf("%lu (%.2f) ", fails_per_component[i], (f64)sim_time / ((f64)fails_per_component[i] / ((f64)(sim_i + 1) * sim_time / (f64)sim_times)));
+////            printf("%lu ", fails_per_component[i]);
+//        }
+//        putchar('\n');
     }
     results.n_components = count;
     results.failures_per_component = fails_per_component;

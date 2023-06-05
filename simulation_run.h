@@ -24,7 +24,7 @@ struct rmod_sim_result_struct
     f32 total_costs;
     f32 duration;
     u32 n_components;
-    u32* failures_per_component;
+    u64* failures_per_component;
 };
 
 rmod_result rmod_simulate_graph(

@@ -35,6 +35,7 @@ typedef float_t f32;
 typedef void u0, i0;
 #ifdef _WIN32
 #include <Windows.h>
+#include <stdio.h>
 #endif
 typedef unsigned char c8;
 typedef uint_least16_t c16;

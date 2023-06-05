@@ -11,7 +11,7 @@ rmod_result rmod_program_create(const char* file_name, rmod_program* p_program)
 {
     RMOD_ENTER_FUNCTION;
     rmod_result res = RMOD_RESULT_SUCCESS;
-
+#ifndef _WIN32
     char name_path_buffer[PATH_MAX];
     if (!realpath(file_name, name_path_buffer))
     {
@@ -34,6 +34,31 @@ rmod_result rmod_program_create(const char* file_name, rmod_program* p_program)
         res = RMOD_RESULT_BAD_PATH;
         goto end;
     }
+#else
+    char name_path_buffer[PATH_MAX];
+    char* file_part;
+    if (!GetFullPathNameA(file_name, PATH_MAX, name_path_buffer, &file_part))
+    {
+        RMOD_ERROR("Could not get the real path of file \"%s\", reason: %s", file_name, RMOD_ERRNO_MESSAGE);
+        res = RMOD_RESULT_BAD_PATH;
+        goto end;
+    }
+    char prev_wd[PATH_MAX], new_wd[PATH_MAX];
+    if (!getcwd(prev_wd, PATH_MAX))
+    {
+        RMOD_ERROR("Failed getting the current working directory, reason: %s", RMOD_ERRNO_MESSAGE);
+        res = RMOD_RESULT_BAD_PATH;
+        goto end;
+    }
+    //  Literally same size
+    strncpy(new_wd, name_path_buffer, PATH_MAX);
+    if (chdir(dirname(new_wd)) < 0)
+    {
+        RMOD_ERROR("Could not change working directory to \"%s\", reason: %s", new_wd, RMOD_ERRNO_MESSAGE);
+        res = RMOD_RESULT_BAD_PATH;
+        goto end;
+    }
+#endif
 
     u32 file_count = 1;
     u32 file_capacity = 16;

@@ -106,7 +106,7 @@ rmod_result rmod_map_file_to_memory(const char* filename, rmod_memory_file* p_fi
 
 #else
 
-void* map_file_to_memory2(const char* filename, u64* p_out_size)
+void* file_to_memory(const char* filename, u64* p_out_size)
 {
     RMOD_ENTER_FUNCTION;
     void* ptr = NULL;
@@ -147,6 +147,16 @@ void unmap_file(void* ptr, u64 size)
 }
 #endif
 
+
+static void file_from_memory(void* ptr, u64 size)
+{
+    RMOD_ENTER_FUNCTION;
+    jfree(ptr);
+    (void)size;
+    RMOD_LEAVE_FUNCTION;
+}
+
+
 void rmod_unmap_file(rmod_memory_file* p_file_out)
 {
     file_from_memory(p_file_out->ptr, p_file_out->file_size);
@@ -159,3 +169,33 @@ bool map_file_is_named(const rmod_memory_file* f1, const char* filename)
     RMOD_LEAVE_FUNCTION;
     return res;
 }
+
+
+
+rmod_result rmod_map_file_to_memory(const char* filename, rmod_memory_file* p_file_out)
+{
+    RMOD_ENTER_FUNCTION;
+    rmod_result res = RMOD_RESULT_SUCCESS;
+    if (!GetFullPathNameA(filename, sizeof(p_file_out->name), p_file_out->name, NULL))
+    {
+        RMOD_ERROR("Could not find full path of file \"%s\", reason: %s", filename, RMOD_ERRNO_MESSAGE);
+        res = RMOD_RESULT_BAD_PATH;
+        goto end;
+    }
+
+    u64 size;
+    void* ptr = file_to_memory(filename, &size);
+    if (!ptr)
+    {
+        RMOD_ERROR("Failed mapping file to memory");
+        res = RMOD_RESULT_BAD_FILE_MAP;
+        goto end;
+    }
+
+    p_file_out->ptr = ptr;
+    p_file_out->file_size = size;
+    end:
+    RMOD_LEAVE_FUNCTION;
+    return res;
+}
+

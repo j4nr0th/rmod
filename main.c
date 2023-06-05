@@ -117,7 +117,7 @@ int main(int argc, const char* argv[])
             //  IMPORTANT: ON WINDOWS ADD HANDLING OF WINDOWS NATIVE ERROR CODES GIVEN BY GetLastError()
             RMOD_ERROR_CRIT("Could not find full path to file \"%s\", reason: %s", argv[1], RMOD_ERRNO_MESSAGE);
         }
-        sprintf(file_component, PATH_MAX - (file_componen - program_filename), "%.*s", egment_filename.len, segment_filename.begin);
+        snprintf(file_component, PATH_MAX - (uintptr_t)(file_component - program_filename), "%.*s", segment_filename.len, segment_filename.begin);
         rmod_unmap_file(&cfg_file);
     }
 #endif

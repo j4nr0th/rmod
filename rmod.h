@@ -17,7 +17,7 @@ struct rmod_memory_file_struct
 #ifndef _WIN32
     char name[PATH_MAX];
 #else
-#error NOT WRITTEN
+    char name[4096];
 #endif
 };
 

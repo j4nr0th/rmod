@@ -3,6 +3,7 @@
 //
 
 #include "simulation_run.h"
+#include <stdio.h>
 
 static inline f32 find_next_failure(f64 (* rng_function)(void* param), void* rng_param, f32 failure_rate)
 {
@@ -159,7 +160,8 @@ rmod_result rmod_simulate_graph(
     int time_res = clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t_begin);
     assert(time_res >= 0);
 #else
-#error NOT IMPLEMENTED
+    LARGE_INTEGER t_begin;
+    QueryPerformanceCounter(&t_begin);
 #endif
 #define N_MILESTONES 40
     u32 milestones[N_MILESTONES] = {};
@@ -292,7 +294,10 @@ rmod_result rmod_simulate_graph(
         results.duration += (f32)(ns / 1e9);
     }
 #else
-#error NOT IMPLEMENTED
+    LARGE_INTEGER t_end, freq;
+    QueryPerformanceCounter(&t_end);
+    QueryPerformanceFrequency(&freq);
+    results.duration = (f32)((f64)(t_end.QuadPart - t_begin.QuadPart) / (f64)freq.QuadPart);
 #endif
     fprintf(stdout, "\nSim concluded in %g seconds\n", results.duration);
 

@@ -7,6 +7,9 @@
 
 #ifdef _WIN32
 #include <stdio.h>
+#include <unistd.h>
+#include <libgen.h>
+
 #else
 #include <unistd.h>
 #include <libgen.h>
@@ -1102,8 +1105,11 @@ rmod_result rmod_convert_xml(
                 goto failed;
             }
 
-
+#ifndef _WIN32
             if (!realpath(name_buffer, buffer))
+#else
+            if (!GetFullPathName(name_buffer, MAX_PATH, buffer, NULL))
+#endif
             {
                 RMOD_ERROR("Could not find real path of file \"%s\", reason: %s", name_buffer, RMOD_ERRNO_MESSAGE);
                 res = RMOD_RESULT_NOMEM;

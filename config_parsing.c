@@ -299,9 +299,20 @@ rmod_result rmod_parse_configuration_file(const char* filename, const rmod_confi
         res = RMOD_RESULT_BAD_PATH;
         goto failed;
     }
-
 #else
-#error NOT IMPLEMENTED
+    char* const real_name = lin_jalloc(G_LIN_JALLOCATOR, PATH_MAX);
+    if (!real_name)
+    {
+        RMOD_ERROR("Failed lin_jalloc(%p, %zu)", G_LIN_JALLOCATOR, PATH_MAX);
+        res = RMOD_RESULT_NOMEM;
+        goto failed;
+    }
+    if (!GetFullPathNameA(filename, PATH_MAX, real_name, NULL))
+    {
+        RMOD_ERROR("File path \"%s\" could not be resolved, reason: %s", filename, RMOD_ERRNO_MESSAGE);
+        res = RMOD_RESULT_BAD_PATH;
+        goto failed;
+    }
 #endif
     rmod_memory_file mem_file;
     if ((res = rmod_map_file_to_memory(real_name, &mem_file)) != RMOD_RESULT_SUCCESS)

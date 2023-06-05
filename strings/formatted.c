@@ -309,7 +309,7 @@ char* lin_vasprintf(linear_jallocator* allocator, size_t* p_size, const char* fm
                     //  Wide string
                     const wchar_t* wstr = va_arg(args, const wchar_t*);
                     const wchar_t* str = wstr;
-                    mbstate_t state = {};
+                    mbstate_t state = {0};
                     size_t len = wcsrtombs(NULL, &str, 0, NULL);
                     if (len != (size_t)-1)
                     {

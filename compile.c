@@ -778,6 +778,7 @@ rmod_result rmod_compile_graph(
     else
     {
         memcpy(name_copy, target_chain->header.type_name.begin, target_chain->header.type_name.len + 1);
+        name_copy[target_chain->header.type_name.len] = 0;
     }
     p_out->graph_type = name_copy;
 

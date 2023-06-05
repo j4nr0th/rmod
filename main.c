@@ -18,73 +18,21 @@ static i32 error_hook(const char* thread_name, u32 stack_trace_count, const char
     return 0;
 }
 
-static void print_xml_element(const rmod_xml_element * e, const u32 depth)
-{
-    for (u32 i = 0; i < depth; ++i)
-        putchar('\t');
-    printf("<%.*s (depth %u)", e->name.len, e->name.begin, e->depth);
-    for (u32 i = 0; i < e->attrib_count; ++i)
-    {
-        printf(" %.*s=\"%.*s\"", e->attribute_names[i].len, e->attribute_names[i].begin, e->attribute_values[i].len, e->attribute_values[i].begin);
-    }
-    putchar('>');
-    if (e->depth)
-        putchar('\n');
-
-
-    if (e->value.len)
-    {
-        if (e->depth)
-            for (u32 i = 0; i < depth + 1; ++i)
-                putchar('\t');
-        printf("%.*s", e->value.len, e->value.begin);
-        if (e->depth)
-            putchar('\n');
-
-    }
-
-    for (u32 i = 0; i < e->child_count; ++i)
-    {
-        print_xml_element(e->children + i, depth + 1);
-    }
-
-    if (e->depth)
-        for (u32 i = 0; i < depth; ++i)
-            putchar('\t');
-    printf("</%.*s>\n", e->name.len, e->name.begin);
-}
 
 static f64 rng_callback_function(void* param)
 {
     return rmod_msws_rngf(param);
 }
 
-typedef struct
+static f64 cooler_rng(void* param)
 {
-    u32* p_out;
-    u32 min_v;
-    u32 max_v;
-} uint32_conversion_params;
-
-static bool convert_to_uint32(const string_segment value, void* const p_out)
-{
-    const uint32_conversion_params* const p_conv = p_out;
-    char* end_pos = NULL;
-    const uintmax_t v = strtoumax(value.begin, &end_pos, 10);
-    if (end_pos != value.begin + value.len)
-    {
-        RMOD_ERROR("Failed conversion to uint32 due to invalid value: \"%.*s\"", value.len, value.begin);
-        return false;
-    }
-    if (v < p_conv->min_v || v > p_conv->max_v)
-    {
-        RMOD_ERROR("Failed conversion to uint32 due to value \"%.*s\" outside of allowed range [%u, %u]", value.len, value.begin, p_conv->min_v, p_conv->max_v);
-        return false;
-    }
-    *p_conv->p_out = v;
-
-    return true;
+    (void)param;
+    return (f64)((u32)rand())/RAND_MAX;
 }
+
+#ifndef PATH_MAX
+# define PATH_MAX 4096
+#endif
 
 int main(int argc, const char* argv[])
 {
@@ -130,7 +78,7 @@ int main(int argc, const char* argv[])
             };
 
     rmod_memory_file cfg_file;
-    printf("Parsing job_desc\n");
+    printf("Parsing job description from file \"%s\"\n", argv[1]);
     res = rmod_parse_configuration_file(argv[1], &config_master, &cfg_file);
     if (res != RMOD_RESULT_SUCCESS)
     {
@@ -148,6 +96,7 @@ int main(int argc, const char* argv[])
     {
         RMOD_ERROR_CRIT("Failed allocating %zu bytes for program filename, reason: %s", PATH_MAX, rmod_result_str(RMOD_RESULT_NOMEM));
     }
+#ifndef _WIN32
     if (!realpath(argv[1], program_filename))
     {
         RMOD_ERROR_CRIT("Could not find full path to file \"%s\", reason: %s", argv[1], RMOD_ERRNO_MESSAGE);
@@ -160,10 +109,22 @@ int main(int argc, const char* argv[])
                 segment_filename.begin);
         rmod_unmap_file(&cfg_file);
     }
+#else
+    {
+        char* file_component;
+        if (!GetFullPathNameA(argv[1], PATH_MAX, program_filename, &file_component))
+        {
+            //  IMPORTANT: ON WINDOWS ADD HANDLING OF WINDOWS NATIVE ERROR CODES GIVEN BY GetLastError()
+            RMOD_ERROR_CRIT("Could not find full path to file \"%s\", reason: %s", argv[1], RMOD_ERRNO_MESSAGE);
+        }
+        sprintf(file_component, PATH_MAX - (file_componen - program_filename), "%.*s", egment_filename.len, segment_filename.begin);
+        rmod_unmap_file(&cfg_file);
+    }
+#endif
 
 
     rmod_program program;
-    printf("Creating simulation program\n");
+    printf("Creating simulation program from file \"%s\"\n", program_filename);
     res = rmod_program_create(program_filename, &program);
     lin_jfree(G_LIN_JALLOCATOR, program_filename);
     if (res != RMOD_RESULT_SUCCESS)
@@ -171,7 +132,7 @@ int main(int argc, const char* argv[])
         RMOD_ERROR_CRIT("Could not create program to simulate, reason: %s", rmod_result_str(res));
     }
     rmod_graph graph_a;
-    printf("Compiling program chain to graph\n");
+    printf("Compiling program chain \"%s\" to graph\n", chain_to_compile);
     res = rmod_compile(&program, &graph_a, chain_to_compile, "main module");
     if (res != RMOD_RESULT_SUCCESS)
     {
@@ -184,8 +145,11 @@ int main(int argc, const char* argv[])
     rmod_msws_init(&rng);
 
     rmod_sim_result results = {};
-    printf("Simulating graph\n");
-    res = rmod_simulate_graph(&graph_a, (f32)sim_time, (u32)sim_reps, &results, rng_callback_function, &rng);
+    printf("Simulating graph built from chain \"%s\" containing %"PRIuFAST32" individual nodes\n", graph_a.graph_type, graph_a.node_count);
+    res = rmod_simulate_graph(&graph_a, (f32)sim_time, (u32)sim_reps, &results,
+                              rng_callback_function, &rng
+//                              cooler_rng, NULL
+                              );
     if (res != RMOD_RESULT_SUCCESS)
     {
         RMOD_ERROR_CRIT("Failed simulating graph [%s - %s], reason: %s", graph_a.module_name, graph_a.graph_type, rmod_result_str(res));
@@ -193,10 +157,11 @@ int main(int argc, const char* argv[])
 
     printf("Simulation results (took %g s for %lu runs, or %g s per run):\n\tAvg flow: %g\n\tAvg failures: %g\n\tAvg costs: %g\n", results.duration, results.sim_count, (f64)results.duration / (f64)results.sim_count, (f64)(results.total_flow)/(f64)results.sim_count, (f64)(results.total_failures)/(f64)results.sim_count, (f64)(results.total_costs)/(f64)results.sim_count);
 
-    printf("Failures per component:\n");
+    printf("Mean failures per component:\n");
     for (u32 i = 0; i < results.n_components; ++i)
     {
-        printf("\t%u: %u\n", i, results.failures_per_component[i]);
+        const f64 avg_fails = (f64) results.failures_per_component[i] / (f64) sim_reps;
+        printf("\t%u: %u (avg of %g, MTBF: %g)\n", i, results.failures_per_component[i], avg_fails, (f64)sim_time / avg_fails);
     }
     jfree(results.failures_per_component);
 
@@ -223,12 +188,15 @@ int main(int argc, const char* argv[])
     {
         jallocator* const jallocator = G_JALLOCATOR;
         G_JALLOCATOR = NULL;
+        uint_fast64_t max_alloc_size, total_allocated, max_usage, alloc_count;
+        jallocator_statistics(jallocator, &max_alloc_size, &total_allocated, &max_usage, &alloc_count);
+        printf("Jallocator statistics:\n\tBiggest allocation made: %"PRIuFAST64" bytes\n\tTotal allocated memory: %"PRIuFAST64" bytes\n\tMaximum usage: %"PRIuFAST64" bytes\n\tAllocations made: %"PRIuFAST64" allocations\n", max_alloc_size, total_allocated, max_usage, alloc_count);
         jallocator_destroy(jallocator);
     }
     {
         linear_jallocator* const lin_jallocator = G_LIN_JALLOCATOR;
         G_LIN_JALLOCATOR = NULL;
-        printf("Peek lin_jalloc usage %zu bytes\n", lin_jallocator_destroy(lin_jallocator));
+        printf("Peak lin_jalloc usage %"PRIuFAST64" bytes\n", lin_jallocator_destroy(lin_jallocator));
     }
     RMOD_LEAVE_FUNCTION;
     rmod_error_cleanup_thread();

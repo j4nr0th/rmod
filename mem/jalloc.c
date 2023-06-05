@@ -15,8 +15,12 @@
 typedef struct mem_chunk_struct mem_chunk;
 struct mem_chunk_struct
 {
+#ifdef JALLOC_TRACKING
     uint_fast64_t size:48;
     uint_fast64_t idx:14;
+#else
+    uint_fast64_t size:63;
+#endif
     uint_fast64_t used:1;
     uint_fast64_t malloced:1;
     mem_chunk* next;
@@ -40,7 +44,13 @@ struct jallocator_struct
     uint_fast64_t pool_size;
     uint_fast64_t capacity;
     uint_fast64_t count;
+#ifdef JALLOC_TRACKING
     uint_fast64_t allocator_index;
+    uint_fast64_t total_allocated;
+    uint_fast64_t biggest_allocation;
+    uint_fast64_t max_allocated;
+    uint_fast64_t current_allocated;
+#endif
     mem_pool* pools;
     uint_fast64_t malloc_limit;
 };
@@ -115,11 +125,18 @@ jallocator* jallocator_create(uint_fast64_t pool_size, uint_fast64_t malloc_limi
         c->size = pool_size;
     }
     this->count = initial_pool_count;
+#ifdef JALLOC_TRACKING
+    this->biggest_allocation = 0;
+    this->max_allocated = 0;
+    this->total_allocated = 0;
+    this->allocator_index = 0;
+    this->current_allocated = 0;
+#endif
 
     return this;
 }
 
-uint_fast64_t jallocator_destroy(jallocator* allocator)
+void jallocator_destroy(jallocator* allocator)
 {
     for (uint_fast32_t i = 0; i < allocator->count; ++i)
     {
@@ -135,7 +152,6 @@ uint_fast64_t jallocator_destroy(jallocator* allocator)
     free(allocator->pools);
     memset(allocator, 0, sizeof(*allocator));
     free(allocator);
-    return 0;
 }
 
 static inline uint_fast64_t round_up_size(uint_fast64_t size)
@@ -327,6 +343,10 @@ void* jalloc(jallocator* allocator, uint_fast64_t size)
         chunk->used = 1;
         chunk->malloced = 1;
         chunk->size = size;
+        if (allocator->max_allocated < chunk->size)
+        {
+            allocator->max_allocated = chunk->size;
+        }
         return &chunk->next;
     }
 
@@ -392,7 +412,19 @@ void* jalloc(jallocator* allocator, uint_fast64_t size)
     }
 
     chunk->used = 1;
+#ifdef JALLOC_TRACKING
     chunk->idx = ++allocator->allocator_index;
+    allocator->total_allocated += chunk->size;
+    if (allocator->max_allocated < chunk->size)
+    {
+        allocator->max_allocated = chunk->size;
+    }
+    allocator->current_allocated += chunk->size;
+    if (allocator->current_allocated > allocator->max_allocated)
+    {
+        allocator->max_allocated = allocator->current_allocated;
+    }
+#endif
     return &chunk->next;
 }
 
@@ -424,6 +456,19 @@ void* jrealloc(jallocator* allocator, void* ptr, uint_fast64_t new_size)
             }
             new_chunk->malloced = 1;
             new_chunk->used = 1;
+#ifdef JALLOC_TRACKING
+            allocator->current_allocated -= new_chunk->size;
+            allocator->current_allocated += new_size;
+            allocator->total_allocated += new_size > new_chunk->size ? new_size - new_chunk->size : 0;
+            if (allocator->current_allocated > allocator->max_allocated)
+            {
+                allocator->max_allocated = allocator->current_allocated;
+            }
+            if (new_size > allocator->biggest_allocation)
+            {
+                allocator->biggest_allocation = new_size;
+            }
+#endif
             new_chunk->size = new_size;
             return &new_chunk->next;
         }
@@ -458,9 +503,24 @@ void* jrealloc(jallocator* allocator, void* ptr, uint_fast64_t new_size)
         chunk->used = 0;
         insert_chunk_into_pool(pool, chunk);
         //  Return new memory
+
+#ifdef JALLOC_TRACKING
+        allocator->current_allocated -= chunk->size;
+        allocator->current_allocated += new_size;
+        allocator->total_allocated += new_size > chunk->size ? new_size - chunk->size : 0;
+        if (allocator->current_allocated > allocator->max_allocated)
+        {
+            allocator->max_allocated = allocator->current_allocated;
+        }
+        if (new_size > allocator->biggest_allocation)
+        {
+            allocator->biggest_allocation = new_size;
+        }
+#endif
         return &new_chunk->next;
     }
 
+    const uint_fast64_t old_size = chunk->size;
     //  Check if increasing or decreasing the chunk's size
     if (new_size > chunk->size)
     {
@@ -511,6 +571,19 @@ void* jrealloc(jallocator* allocator, void* ptr, uint_fast64_t new_size)
     }
 
 
+#ifdef JALLOC_TRACKING
+    allocator->current_allocated -= old_size;
+    allocator->current_allocated += new_size;
+    allocator->total_allocated += new_size > old_size ? new_size - old_size : 0;
+    if (allocator->current_allocated > allocator->max_allocated)
+    {
+        allocator->max_allocated = allocator->current_allocated;
+    }
+    if (new_size > allocator->biggest_allocation)
+    {
+        allocator->biggest_allocation = new_size;
+    }
+#endif
     return &chunk->next;
 }
 
@@ -595,6 +668,9 @@ void jfree(jallocator* allocator, void* ptr)
     //  Check what pool this is from
     mem_pool* pool = find_chunk_pool(allocator, ptr);
     mem_chunk* chunk = ptr - offsetof(mem_chunk, next);
+#ifdef JALLOC_TRACKING
+            allocator->current_allocated -= chunk->size;
+#endif
     if (!pool)
     {
         //  This is either going to be a malloced chunk or a SIGSEGV
@@ -640,6 +716,18 @@ jallocator_count_used_blocks(jallocator* allocator, uint_fast32_t size_out_buffe
 
 
     return found;
+}
+
+void jallocator_statistics(
+        jallocator* allocator, uint_fast64_t* p_max_allocation_size, uint_fast64_t* p_total_allocated,
+        uint_fast64_t* p_max_usage, uint_fast64_t* p_allocation_count)
+{
+#ifdef JALLOC_TRACKING
+    *p_max_allocation_size = allocator->biggest_allocation;
+    *p_max_usage = allocator->max_allocated;
+    *p_total_allocated = allocator->total_allocated;
+    *p_allocation_count = allocator->allocator_index;
+#endif
 }
 
 static inline uint_fast64_t check_for_aligned_size(mem_chunk* chunk, uint_fast64_t alignment, uint_fast64_t size)

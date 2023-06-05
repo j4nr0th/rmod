@@ -10,7 +10,7 @@ static inline f32 find_next_failure(f64 (* rng_function)(void* param), void* rng
     return -(f32)log(1.0 - rng_function(rng_param)) / (f32)failure_rate;
 }
 
-static inline f32 find_system_throughput(
+static f32 find_system_throughput(
         f32*const sys_failure, const u32 count, const rmod_element_status* const status, const u32* const parent_count,
         const rmod_graph_node_id* const* const parent_array, const f32* const effect, f32* value,
         const f32* const failure_rate)
@@ -161,26 +161,27 @@ rmod_result rmod_simulate_graph(
 #else
 #error NOT IMPLEMENTED
 #endif
-    const u32 milestones[10] = {0, sim_times / 10, sim_times / 5, sim_times / 5 + sim_times / 10, sim_times / 5 * 2, sim_times / 2, sim_times / 2 + sim_times / 10, sim_times / 2 + sim_times / 5, sim_times / 2 + sim_times / 5 + sim_times / 10, sim_times / 2 + 2 * sim_times / 5};
+#define N_MILESTONES 40
+    u32 milestones[N_MILESTONES] = {};
+    for (u32 i = 0; i < N_MILESTONES; ++i)
+    {
+        milestones[i] = (u32)((f64)sim_times / (f64)N_MILESTONES * (f64)i);
+    }
     u32 milestone = 0;
-    fprintf(stdout, "Sim progress (  0.0 %%): [------------------------------]");
+    fprintf(stdout, "Simulation progress (  0.0 %%): [----------------------------------------]");
     fflush(stdout);
     for (u32 sim_i = 0; sim_i < sim_times; ++sim_i)
     {
         if (sim_i == milestones[milestone])
         {
-            fprintf(stdout, "\rSim progress (% 3.1f %%): [", (f64)sim_i / (f64)sim_times * 100);
+            fprintf(stdout, "\rSimulation progress (%5.1f %%): [", (f64)sim_i / (f64)sim_times * 100);
             u32 i;
             for (i = 0; i < milestone; ++i)
             {
                 fputc('=', stdout);
-                fputc('=', stdout);
-                fputc('=', stdout);
             }
-            while (i < 10)
+            while (i < N_MILESTONES)
             {
-                fputc('-', stdout);
-                fputc('-', stdout);
                 fputc('-', stdout);
                 i += 1;
             }
@@ -220,7 +221,7 @@ rmod_result rmod_simulate_graph(
             total_throughput += throughput * dt;
 
             //  Find which failure occurs next
-            u32 fail_idx = 0;
+            u32 fail_idx = -1;
             f32 failed_so_far = 0.0f;
             const f32 fail_measure = (f32) rng_function(rng_param) * system_failure_rate;
             for (u32 i = 0; i < count; ++i)
@@ -229,13 +230,15 @@ rmod_result rmod_simulate_graph(
                 {
                     continue;
                 }
-                if ((failed_so_far += failure_rate[i]) >= fail_measure)
+                failed_so_far += failure_rate[i];
+                if ((failed_so_far) >= fail_measure)
                 {
                     fail_idx = i;
                     break;
                 }
             }
             assert(fail_idx < count);
+            assert(fail_idx != -1);
 
             const rmod_failure_type type = failure[fail_idx];
             status[fail_idx] = RMOD_ELEMENT_STATUS_DOWN;
@@ -276,7 +279,7 @@ rmod_result rmod_simulate_graph(
     }
     results.n_components = count;
     results.failures_per_component = fails_per_component;
-    fprintf(stdout, "Sim progress (100.0 %%): [==============================]");
+    fprintf(stdout, "\rSimulation progress (100.0 %%): [========================================]\n");
     fflush(stdout);
 
 #ifndef _WIN32

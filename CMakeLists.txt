@@ -22,7 +22,10 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
     add_compile_options("-march=native")
 elseif (CMAKE_C_COMPILER_ID STREQUAL "MSVC")
     add_compile_options("/arch:AVX2")
+endif ()
 
+if ((CMAKE_BUILD_TYPE STREQUAL Debug) OR (CMAKE_BUILD_TYPE STREQUAL RelWithDebInfo))
+    add_compile_definitions(JALLOC_TRACKING)
 endif ()
 
 add_executable(rmod main.c

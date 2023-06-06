@@ -1,5 +1,4 @@
 #include "rmod.h"
-#include "graph_parsing.h"
 #include "compile.h"
 #include "program.h"
 #include "random/msws.h"
@@ -8,11 +7,15 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <libgen.h>
+#include <float.h>
 #include "config_parsing.h"
 
 
 static i32 error_hook(const char* thread_name, u32 stack_trace_count, const char*const* stack_trace, rmod_error_level level, u32 line, const char* file, const char* function, const char* message, void* param)
 {
+    (void)param;
+    (void)stack_trace;
+    (void)stack_trace_count;
     fprintf(level > RMOD_ERROR_LEVEL_WARN ? stderr : stdout, "Thread (%s) sent %s from function %s in file %s at line %i: %s\n", thread_name,
             rmod_error_level_str(level), function, file, line, message);
     return 0;
@@ -22,12 +25,6 @@ static i32 error_hook(const char* thread_name, u32 stack_trace_count, const char
 static f64 rng_callback_function(void* param)
 {
     return rmod_msws_rngf(param);
-}
-
-static f64 cooler_rng(void* param)
-{
-    (void)param;
-    return (f64)((u32)rand())/RAND_MAX;
 }
 
 #ifndef PATH_MAX
@@ -65,12 +62,14 @@ int main(int argc, const char* argv[])
     string_segment segment_filename;
     string_segment segment_chain;
     uintmax_t thrd_count;
+    f64 repair_limit;
     const rmod_config_entry config_children[] =  {
-            {.name = "sim_time", .child_count = 0, .converter = {.c_real = {.p_out = &sim_time, .v_max = 100.0, .v_min = 1.0, .type = RMOD_CFG_VALUE_REAL }}},
-            {.name = "sim_reps", .child_count = 0, .converter = {.c_uint = {.p_out = &sim_reps, .v_min = 1, .v_max = 10000000, .type = RMOD_CFG_VALUE_UINT}}},
+            {.name = "sim_time", .child_count = 0, .converter = {.c_real = {.p_out = &sim_time, .v_max = INFINITY, .v_min = FLT_EPSILON, .type = RMOD_CFG_VALUE_REAL }}},
+            {.name = "sim_reps", .child_count = 0, .converter = {.c_uint = {.p_out = &sim_reps, .v_min = 1, .v_max = UINTMAX_MAX, .type = RMOD_CFG_VALUE_UINT}}},
             {.name = "filename", .child_count = 0, .converter = {.c_str = {.type = RMOD_CFG_VALUE_STR, .p_out = &segment_filename}}},
             {.name = "chain", .child_count = 0, .converter = {.c_str = {.type = RMOD_CFG_VALUE_STR, .p_out = &segment_chain}}},
-            {.name = "threads", .child_count = 0, .converter = {.c_uint = {.type=RMOD_CFG_VALUE_UINT, .v_min = 0, .v_max = 256, .p_out = &thrd_count}}},
+            {.name = "threads", .child_count = 0, .converter = {.c_uint = {.type = RMOD_CFG_VALUE_UINT, .v_min = 0, .v_max = 256, .p_out = &thrd_count}}},
+            {.name = "repair_limit", .child_count = 0, .converter = {.c_real = {.type = RMOD_CFG_VALUE_REAL, .v_min = 0.0, .v_max = INFINITY, .p_out = &repair_limit}}}
     };
     const rmod_config_entry config_master =
             {
@@ -150,7 +149,7 @@ int main(int argc, const char* argv[])
     printf("Simulating graph built from chain \"%s\" containing %"PRIuFAST32" individual nodes\n", graph_a.graph_type, graph_a.node_count);
     if (thrd_count < 2)
     {
-        res = rmod_simulate_graph(&graph_a, (f32)sim_time, (u32)sim_reps, &results, rng_callback_function, &rng);
+        res = rmod_simulate_graph(&graph_a, (f32) sim_time, (u32) sim_reps, &results, rng_callback_function, &rng, (f32)repair_limit);
         if (res != RMOD_RESULT_SUCCESS)
         {
             RMOD_ERROR_CRIT("Failed simulating graph [%s - %s], reason: %s", graph_a.module_name, graph_a.graph_type, rmod_result_str(res));
@@ -158,14 +157,14 @@ int main(int argc, const char* argv[])
     }
     else
     {
-        res = rmod_simulate_graph_mt(&graph_a, (f32)sim_time, (u32)sim_reps, &results, thrd_count);
+        res = rmod_simulate_graph_mt(&graph_a, (f32) sim_time, (u32) sim_reps, &results, thrd_count, (f32)repair_limit);
         if (res != RMOD_RESULT_SUCCESS)
         {
             RMOD_ERROR_CRIT("Failed simulating graph [%s - %s], reason: %s", graph_a.module_name, graph_a.graph_type, rmod_result_str(res));
         }
     }
 
-    printf("Simulation results (took %g s for %lu runs, or %g s per run):\n\tAvg flow: %g\n\tAvg failures: %g\n\tAvg costs: %g\n", results.duration, results.sim_count, (f64)results.duration / (f64)results.sim_count, (f64)(results.total_flow)/(f64)results.sim_count, (f64)(results.total_failures)/(f64)results.sim_count, (f64)(results.total_costs)/(f64)results.sim_count);
+    printf("Simulation results (took %g s for %lu runs, or %g s per run):\n\tAvg flow: %g\n\tAvg failures: %g\n\tAvg costs: %g\n", results.duration, results.sim_count, (f64)results.duration / (f64)results.sim_count, (f64)(results.total_flow)/(f64)results.sim_count/sim_time, (f64)(results.total_failures)/(f64)results.sim_count, (f64)(results.total_costs)/(f64)results.sim_count);
 
     printf("Mean failures per component:\n");
     for (u32 i = 0; i < results.n_components; ++i)

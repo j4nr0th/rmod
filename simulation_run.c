@@ -5,7 +5,6 @@
 #include "simulation_run.h"
 #include "random/msws.h"
 #include <pthread.h>
-#include <signal.h>
 #include <stdio.h>
 
 static inline f32 find_next_failure(f64 (* rng_function)(void* param), void* rng_param, f32 failure_rate)
@@ -46,7 +45,7 @@ static f32 find_system_throughput(
 
 rmod_result rmod_simulate_graph(
         const rmod_graph* graph, f32 simulation_duration, u32 simulation_repetitions, rmod_sim_result* p_res_out,
-        f64 (* rng_function)(void* param), void* rng_param)
+        f64 (* rng_function)(void*), void* rng_param, f32 repair_limit)
 {
     RMOD_ENTER_FUNCTION;
     rmod_result res = RMOD_RESULT_SUCCESS;
@@ -160,6 +159,23 @@ rmod_result rmod_simulate_graph(
             .failures_per_component = NULL,
             };
 
+    f32 full_fail_rate = 0.0f;
+    value[0] = effect[0];
+    f32 full_throughput;
+    //  Reset status before simulation
+    for (u32 i = 0; i < node_count; ++i)
+    {
+        node_status[i] = RMOD_ELEMENT_STATUS_WORK;
+    }
+    if ((full_throughput = find_system_throughput(&full_fail_rate, node_count, node_status, parent_count, parent_ids, effect, value, failure_rate)) < repair_limit)
+    {
+        RMOD_ERROR("Maximum graph throughput was %g, however minimum value for repair was specified to be %g. This is most likely due to incorrect specification", full_throughput, repair_limit);
+        jfree(fails_per_component);
+        res = RMOD_RESULT_BAD_VALUE;
+        goto end;
+    }
+
+
 #ifndef _WIN32
     struct timespec t_begin;
     int time_res = clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t_begin);
@@ -205,7 +221,6 @@ rmod_result rmod_simulate_graph(
         {
             node_status[i] = RMOD_ELEMENT_STATUS_WORK;
         }
-        value[0] = effect[0];
         //  Compute graph throughput
         system_failure_rate = 0.0f;
 
@@ -260,7 +275,7 @@ rmod_result rmod_simulate_graph(
                 throughput = find_system_throughput(&system_failure_rate, node_count, node_status, parent_count, parent_ids, effect, value, failure_rate);
             }
 
-            if (throughput == 0.0f || type == RMOD_FAILURE_TYPE_CRITICAL)
+            if (throughput < repair_limit || type == RMOD_FAILURE_TYPE_CRITICAL)
             {
                 //  Need to maintain, so repair all systems
                 for (u32 i = 0; i < node_count; ++i)
@@ -324,9 +339,10 @@ end:
 
 typedef struct
 {
+    u32 node_count;
     u32 reps_to_do;
     f32 duration;
-    u32 node_count;
+    f32 repair_limit;
     const f32* failure_rate;
     const f32* cost;
     const f32* effect;
@@ -361,6 +377,7 @@ static rmod_result simulate_worker(const simulation_parameters* params, rmod_msw
     const rmod_failure_type* failure_type = params->failure_type;
     const u32* parent_count = params->parent_count;
     const rmod_graph_node_id*const* parent_ids = params->parent_ids;
+    const f32 repair_limit = params->repair_limit;
 
 
     rmod_sim_result results =
@@ -441,7 +458,7 @@ static rmod_result simulate_worker(const simulation_parameters* params, rmod_msw
                 throughput = find_system_throughput(&system_failure_rate, node_count, node_status, parent_count, parent_ids, effect, value, failure_rate);
             }
 
-            if (throughput == 0.0f || type == RMOD_FAILURE_TYPE_CRITICAL)
+            if (throughput < repair_limit || type == RMOD_FAILURE_TYPE_CRITICAL)
             {
                 //  Need to maintain, so repair all systems
                 for (u32 i = 0; i < node_count; ++i)
@@ -518,7 +535,7 @@ static void report_sim_progress(f64 fraction, u32 signs)
 
 rmod_result rmod_simulate_graph_mt(
         const rmod_graph* graph, f32 simulation_duration, u32 simulation_repetitions, rmod_sim_result* p_res_out,
-        u32 thread_count)
+        u32 thread_count, f32 repair_limit)
 {
     RMOD_ENTER_FUNCTION;
     void* const base = lin_jalloc_get_current(G_LIN_JALLOCATOR);
@@ -536,6 +553,8 @@ rmod_result rmod_simulate_graph_mt(
         simulation_repetitions = sim_params.reps_to_do * thread_count;
     }
     sim_params.duration = simulation_duration;
+    sim_params.repair_limit = repair_limit;
+
     //      Reliability of each element
     const u32 node_count = graph->node_count;
     f32* const failure_rate = lin_jalloc(G_LIN_JALLOCATOR, sizeof(*failure_rate) * node_count);
@@ -706,6 +725,22 @@ rmod_result rmod_simulate_graph_mt(
     }
     memset(worker_id_array, 0, sizeof(*worker_id_array) * thread_count);
 
+
+
+    f32 full_fail_rate = 0.0f;
+    value_array[0] = effect[0];
+    f32 full_throughput;
+    //  Reset status before simulation
+    for (u32 i = 0; i < node_count; ++i)
+    {
+        element_status_array[i] = RMOD_ELEMENT_STATUS_WORK;
+    }
+    if ((full_throughput = find_system_throughput(&full_fail_rate, node_count, element_status_array, parent_count, parent_ids, effect, value_array, failure_rate)) < repair_limit)
+    {
+        RMOD_ERROR("Maximum graph throughput was %g, however minimum value for repair was specified to be %g. This is most likely due to incorrect specification", full_throughput, repair_limit);
+        res = RMOD_RESULT_BAD_VALUE;
+        goto failed;
+    }
 
 #ifndef _WIN32
     struct timespec t_begin;

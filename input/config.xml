@@ -3,6 +3,6 @@
     <sim_time>100</sim_time>
     <sim_reps>1000</sim_reps>
     <filename>chain_dependence_test.xml</filename>
-    <threads>1</threads>
+    <threads>8</threads>
     <chain>chain A</chain>
 </config>

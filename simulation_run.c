@@ -705,8 +705,17 @@ rmod_result rmod_simulate_graph_mt(
         goto failed;
     }
     memset(worker_id_array, 0, sizeof(*worker_id_array) * thread_count);
-    struct timespec t_begin, t_end;
-    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t_begin);
+
+
+#ifndef _WIN32
+    struct timespec t_begin;
+    int time_res = clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t_begin);
+    assert(time_res >= 0);
+#else
+    LARGE_INTEGER t_begin;
+    QueryPerformanceCounter(&t_begin);
+#endif
+
     for (u32 i = 0; i < thread_count; ++i)
     {
         pthread_t id;
@@ -728,7 +737,7 @@ rmod_result rmod_simulate_graph_mt(
     fputc('\n', stdout);
     report_sim_progress(0.0, 40);
     u32 sim_reps_total;
-    struct timespec sleep = {.tv_nsec = 100000000}; //    a 100 milliseconds
+    struct timespec sleep = {.tv_nsec = 100000000}; //    100 milliseconds
     do
     {
         sim_reps_total = 0;
@@ -743,7 +752,15 @@ rmod_result rmod_simulate_graph_mt(
     } while (sim_reps_total < simulation_repetitions);
 
 
-    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t_end);
+#ifndef _WIN32
+    struct timespec t_end;
+    time_res = clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t_end);
+    assert(time_res >= 0);
+#else
+    LARGE_INTEGER t_end;
+    QueryPerformanceCounter(&t_end);
+    QueryPerformanceFrequency(&freq);
+#endif
     //  Collect finished workers
     for (u32 i = 0; i < thread_count; ++i)
     {
@@ -769,7 +786,12 @@ rmod_result rmod_simulate_graph_mt(
             .total_failures = 0,
 
             .failures_per_component = final_failures,
-            .duration = (f32)((f64)(t_end.tv_sec - t_begin.tv_sec) + ((f64)(t_end.tv_nsec - t_begin.tv_nsec))),
+#ifndef _WIN32
+            .duration = (f32)((f64)(t_end.tv_sec - t_begin.tv_sec) + ((f64)(t_end.tv_nsec - t_begin.tv_nsec)) / 1e9),
+#else
+
+            .duration = (f32)((f64)(t_end.QuadPart - t_begin.QuadPart) / (f64)freq.QuadPart),
+#endif
             };
     memset(final_failures, 0, sizeof*final_failures * node_count);
     for (u32 i = 0; i < thread_count; ++i)

@@ -37,6 +37,6 @@ add_executable(rmod main.c
         ${PARSING_SOURCE_FILES} ${PARSING_HEADER_FILES}
         )
 
-target_link_libraries(rmod PRIVATE m)
+target_link_libraries(rmod PRIVATE m pthread)
 enable_testing()
 add_subdirectory(random)

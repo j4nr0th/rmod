@@ -59,7 +59,7 @@ int main()
 
     memset(bin_counts, 0, sizeof(bin_counts));
     rmod_msws_state msws;
-    rmod_msws_init(&msws);
+    rmod_msws_init(&msws, 0, 0, 0, 0);
 #ifndef _WIN32
     clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts_begin);
 #else

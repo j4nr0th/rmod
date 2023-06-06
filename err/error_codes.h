@@ -23,6 +23,7 @@ enum rmod_result_enum
     RMOD_RESULT_BAD_FILE_MAP,
     RMOD_RESULT_BAD_PATH,
     RMOD_RESULT_BAD_VALUE,
+    RMOD_RESULT_BAD_THRD,
     RMOD_RESULT_STUPIDITY,
     RMOD_RESULT_COUNT,  //  Has to be the last in the enum
 };

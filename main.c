@@ -64,11 +64,13 @@ int main(int argc, const char* argv[])
     uintmax_t sim_reps;
     string_segment segment_filename;
     string_segment segment_chain;
+    uintmax_t thrd_count;
     const rmod_config_entry config_children[] =  {
             {.name = "sim_time", .child_count = 0, .converter = {.c_real = {.p_out = &sim_time, .v_max = 100.0, .v_min = 1.0, .type = RMOD_CFG_VALUE_REAL }}},
             {.name = "sim_reps", .child_count = 0, .converter = {.c_uint = {.p_out = &sim_reps, .v_min = 1, .v_max = 10000000, .type = RMOD_CFG_VALUE_UINT}}},
             {.name = "filename", .child_count = 0, .converter = {.c_str = {.type = RMOD_CFG_VALUE_STR, .p_out = &segment_filename}}},
-            {.name = "chain", .child_count = 0, .converter = {.c_str = {.type = RMOD_CFG_VALUE_STR, .p_out = &segment_chain}}}
+            {.name = "chain", .child_count = 0, .converter = {.c_str = {.type = RMOD_CFG_VALUE_STR, .p_out = &segment_chain}}},
+            {.name = "threads", .child_count = 0, .converter = {.c_uint = {.type=RMOD_CFG_VALUE_UINT, .v_min = 0, .v_max = 256, .p_out = &thrd_count}}},
     };
     const rmod_config_entry config_master =
             {
@@ -142,17 +144,25 @@ int main(int argc, const char* argv[])
 
 
     rmod_msws_state rng;
-    rmod_msws_init(&rng);
+    rmod_msws_init(&rng, 0, 0, 0, 0);
 
     rmod_sim_result results = {};
     printf("Simulating graph built from chain \"%s\" containing %"PRIuFAST32" individual nodes\n", graph_a.graph_type, graph_a.node_count);
-    res = rmod_simulate_graph(&graph_a, (f32)sim_time, (u32)sim_reps, &results,
-                              rng_callback_function, &rng
-//                              cooler_rng, NULL
-                              );
-    if (res != RMOD_RESULT_SUCCESS)
+    if (thrd_count < 2)
     {
-        RMOD_ERROR_CRIT("Failed simulating graph [%s - %s], reason: %s", graph_a.module_name, graph_a.graph_type, rmod_result_str(res));
+        res = rmod_simulate_graph(&graph_a, (f32)sim_time, (u32)sim_reps, &results, rng_callback_function, &rng);
+        if (res != RMOD_RESULT_SUCCESS)
+        {
+            RMOD_ERROR_CRIT("Failed simulating graph [%s - %s], reason: %s", graph_a.module_name, graph_a.graph_type, rmod_result_str(res));
+        }
+    }
+    else
+    {
+        res = rmod_simulate_graph_mt(&graph_a, (f32)sim_time, (u32)sim_reps, &results, thrd_count);
+        if (res != RMOD_RESULT_SUCCESS)
+        {
+            RMOD_ERROR_CRIT("Failed simulating graph [%s - %s], reason: %s", graph_a.module_name, graph_a.graph_type, rmod_result_str(res));
+        }
     }
 
     printf("Simulation results (took %g s for %lu runs, or %g s per run):\n\tAvg flow: %g\n\tAvg failures: %g\n\tAvg costs: %g\n", results.duration, results.sim_count, (f64)results.duration / (f64)results.sim_count, (f64)(results.total_flow)/(f64)results.sim_count, (f64)(results.total_failures)/(f64)results.sim_count, (f64)(results.total_costs)/(f64)results.sim_count);

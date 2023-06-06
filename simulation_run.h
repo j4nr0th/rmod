@@ -28,7 +28,9 @@ struct rmod_sim_result_struct
 };
 
 rmod_result rmod_simulate_graph(
-        const rmod_graph* graph, f32 sim_time, u32 sim_times, rmod_sim_result* p_res_out,
+        const rmod_graph* graph, f32 simulation_duration, u32 simulation_repetitions, rmod_sim_result* p_res_out,
         f64 (* rng_function)(void* param), void* rng_param);
+
+rmod_result rmod_simulate_graph_mt(const rmod_graph* graph, f32 simulation_duration, u32 simulation_repetitions, rmod_sim_result* p_res_out, u32 thread_count);
 
 #endif //RMOD_SIMULATION_RUN_H

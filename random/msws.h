@@ -9,6 +9,7 @@
 #define RMOD_MSWS_H
 #include <stdint.h>
 #include <stdbool.h>
+#include "../common.h"
 
 typedef struct rmod_msws_state_struct rmod_msws_state;
 struct rmod_msws_state_struct
@@ -20,7 +21,7 @@ struct rmod_msws_state_struct
     double remaining;
 };
 
-void rmod_msws_init(rmod_msws_state* rng);
+void rmod_msws_init(rmod_msws_state* rng, u64 x0, u64 x1, u64 w0, u64 w1);
 
 uint_fast64_t rmod_msws_rng(rmod_msws_state* rng);
 

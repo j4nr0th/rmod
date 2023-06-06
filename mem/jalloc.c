@@ -19,7 +19,7 @@ struct mem_chunk_struct
     uint_fast64_t size:48;
     uint_fast64_t idx:14;
 #else
-    uint_fast64_t size:63;
+    uint_fast64_t size:62;
 #endif
     uint_fast64_t used:1;
     uint_fast64_t malloced:1;
@@ -343,10 +343,12 @@ void* jalloc(jallocator* allocator, uint_fast64_t size)
         chunk->used = 1;
         chunk->malloced = 1;
         chunk->size = size;
+#ifdef JALLOC_TRACKING
         if (allocator->max_allocated < chunk->size)
         {
             allocator->max_allocated = chunk->size;
         }
+#endif
         return &chunk->next;
     }
 
@@ -690,6 +692,9 @@ void jfree(jallocator* allocator, void* ptr)
 uint_fast32_t
 jallocator_count_used_blocks(jallocator* allocator, uint_fast32_t size_out_buffer, uint_fast32_t* out_buffer)
 {
+#ifndef JALLOC_TRACKING
+    return 0;
+#else
     uint_fast32_t found = 0;
     for (uint_fast64_t i = 0; i < allocator->count; ++i)
     {
@@ -716,6 +721,7 @@ jallocator_count_used_blocks(jallocator* allocator, uint_fast32_t size_out_buffe
 
 
     return found;
+#endif
 }
 
 void jallocator_statistics(

@@ -792,7 +792,7 @@ rmod_result rmod_simulate_graph_mt(
     time_res = clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t_end);
     assert(time_res >= 0);
 #else
-    LARGE_INTEGER t_end;
+    LARGE_INTEGER t_end, freq;
     QueryPerformanceCounter(&t_end);
     QueryPerformanceFrequency(&freq);
 #endif

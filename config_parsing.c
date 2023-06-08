@@ -3,7 +3,6 @@
 //
 
 #include "config_parsing.h"
-#include "strings/formatted.h"
 #include <inttypes.h>
 
 static rmod_result report_child_mismatch(const rmod_xml_element* xml_element, const rmod_config_entry* cfg_element)

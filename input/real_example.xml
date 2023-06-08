@@ -1,4 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rmod [
+        <!ELEMENT rmod (block|chain|include)*>
+        <!ELEMENT block (name,mtbf,effect,failure,cost)>
+        <!ELEMENT name (#PCDATA)>
+        <!ELEMENT mtbf (#PCDATA)>
+        <!ELEMENT effect (#PCDATA)>
+        <!ELEMENT failure (#PCDATA)>
+        <!ELEMENT cost (#PCDATA)>
+        <!ELEMENT chain (name,first,last,element+)>
+        <!ELEMENT first (#PCDATA)>
+        <!ELEMENT last (#PCDATA)>
+        <!ELEMENT element (type,label,(child|parent)*)>
+        <!ATTLIST element
+                etype (block|chain) #REQUIRED>
+        <!ELEMENT type (#PCDATA)>
+        <!ELEMENT label (#PCDATA)>
+        <!ELEMENT child (#PCDATA)>
+        <!ELEMENT parent (#PCDATA)>
+        <!ELEMENT include (#PCDATA)>
+        ]>
 <rmod>
     <block>
         <name>pump</name>

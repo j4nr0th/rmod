@@ -1,15 +1,24 @@
 <?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE config [
+        <!ELEMENT config (sim_time,sim_reps,repair_lim,filename,threads,chain)>
+        <!ELEMENT sim_time (#PCDATA)>
+        <!ELEMENT sim_reps (#PCDATA)>
+        <!ELEMENT repair_lim (#PCDATA)>
+        <!ELEMENT filename (#PCDATA)>
+        <!ELEMENT threads (#PCDATA)>
+        <!ELEMENT chain (#PCDATA)>
+        ]>
 <config>
     <!-- sim_time is the duration of the system is simulated for -->
     <sim_time>10</sim_time>
     <!-- sim_resp is the number of times the system is simulated for -->
-    <sim_reps>10000</sim_reps>
+    <sim_reps>100000</sim_reps>
     <!-- repair_lim is the minimum throughput of the system before repair is issued -->
     <repair_lim>10</repair_lim>
     <!-- filename is the (relative) path to file which to load chain from -->
     <filename>chain_dependence_test.xml</filename>
     <!-- threads is the count of threads used to compute -->
-    <threads>4</threads>
+    <threads>1</threads>
     <!-- chain is the name of the chain which will be used to simulate the system -->
     <chain>chain A</chain>
 </config>

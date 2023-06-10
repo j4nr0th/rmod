@@ -55,8 +55,8 @@ extern linear_jallocator* G_LIN_JALLOCATOR;
 #define jalloc(size) malloc(size)
 #define jfree(ptr) free(ptr)
 #define jrealloc(ptr, new_size) realloc(ptr, new_size)
-#define lin_jalloc(p, sz) malloc(sz)
-#define lin_jfree(p, p1) free(p1)
+//#define lin_jalloc(p, sz) malloc(sz)
+//#define lin_jfree(p, p1) free(p1)
 #else
 #define jalloc(size) jalloc(G_JALLOCATOR, (size))
 #define jfree(ptr) jfree(G_JALLOCATOR, (ptr))

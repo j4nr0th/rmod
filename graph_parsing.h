@@ -67,9 +67,9 @@ struct rmod_chain_struct
 {
     rmod_element_type_header header;
     u32 element_count;
+    rmod_chain_element* chain_elements;
     u32 i_first;
     u32 i_last;
-    rmod_chain_element* chain_elements;
     char* name_buffer;
     u32 name_bytes_total;
     bool compiled;

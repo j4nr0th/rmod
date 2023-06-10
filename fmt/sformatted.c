@@ -14,6 +14,9 @@
 #include <unistd.h>
 #include "internal_formatted.h"
 
+#ifndef NDEBUG
+#include <stdio.h>
+#endif
 
 static inline char* write_character_to_memory(
         linear_jallocator* allocator, char* memory, size_t* p_used, size_t* p_reserved, unsigned char c)
@@ -57,6 +60,11 @@ char* lin_sprintf(linear_jallocator* allocator, size_t* const p_size, const char
 char* lin_vasprintf(linear_jallocator* allocator, size_t* p_size, const char* fmt, va_list args)
 {
     if (!p_size || !fmt) return NULL;
+#ifndef NDEBUG
+    va_list copy_1, copy_2;
+    va_copy(copy_1, args);
+    va_copy(copy_2, args);
+#endif
     size_t used = 0, reserved = 64;
     char* memory = lin_jalloc(allocator, reserved);
     for (const char* ptr = fmt; *ptr; ++ptr)
@@ -221,7 +229,7 @@ char* lin_vasprintf(linear_jallocator* allocator, size_t* p_size, const char* fm
 
 
 
-
+            int clear_trailing_zeros = 0;
             double d_abnorm;
             switch (*ptr)
             {
@@ -254,6 +262,10 @@ char* lin_vasprintf(linear_jallocator* allocator, size_t* p_size, const char* fm
                     size_t len = wcsrtombs(NULL, &str, 0, NULL);
                     if (len != (size_t)-1)
                     {
+                        if (precision_set && len > precision)
+                        {
+                            len = precision;
+                        }
                         if (len > reserved - used)
                         {
                             reserved += len + 64;
@@ -275,7 +287,8 @@ char* lin_vasprintf(linear_jallocator* allocator, size_t* p_size, const char* fm
                 else
                 {
                     //  Byte string
-                    for (const char* str = va_arg(args, const char*); *str; ++str)
+                    uint_fast64_t so_far = 0;
+                    for (const char* str = va_arg(args, const char*); *str && (!precision_set || so_far < precision); ++str, ++so_far)
                     {
                         if (!write_character_to_memory(allocator, memory, &used, &reserved, *str)) goto end;
                     }
@@ -1519,6 +1532,7 @@ char* lin_vasprintf(linear_jallocator* allocator, size_t* p_size, const char* fm
                 va_end(copy);
                 int X = (int)exponent;
                 precision_set = 1;
+                clear_trailing_zeros = (flag_alternative_conversion == 0);
                 if (P > X && X >= -4)
                 {
                     precision = (int)(P - 1 - X);
@@ -1668,9 +1682,10 @@ char* lin_vasprintf(linear_jallocator* allocator, size_t* p_size, const char* fm
 
                 uint32_t i;
                 {
+                    double alt_frac = frac;
                     for (i = 0; i < precision && frac != 0.0; ++i)
                     {
-                        buffer[(reserved_buffer - buffer_usage - precision + i)] = double_get_dig_and_shift(&frac);
+                        buffer[(reserved_buffer - buffer_usage - precision + i)] = double_get_dig_and_shift(&alt_frac);
                     }
                     buffer_usage += i;
                     if ((frac != 0.0 && precision) || flag_alternative_conversion)
@@ -1811,6 +1826,17 @@ char* lin_vasprintf(linear_jallocator* allocator, size_t* p_size, const char* fm
 
     *p_size = used;
     //  Return the linearly obtained allocation
+#ifndef NDEBUG
+//  We do a little V&V
+    size_t len = vsnprintf(NULL, 0, fmt, copy_1);
+    va_end(copy_1);
+    char* test_buffer = malloc(len + 1);
+    assert(test_buffer);
+    vsnprintf(test_buffer, len + 1, fmt, copy_2);
+    va_end(copy_2);
+    assert(len == used);
+    assert(memcmp(test_buffer, memory, len) == 0);
+#endif
     return memory;
 }
 

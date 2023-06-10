@@ -7,10 +7,9 @@
 #include <pthread.h>
 #include <stdio.h>
 
-static inline f32 find_next_failure(f64 (* rng_function)(void* param), void* rng_param, f32 failure_rate)
+static inline f32 find_next_failure(rmod_msws_state* rng, f32 failure_rate)
 {
-//    return (f32)(- log(1.0 - rng_function(rng_param)) / (f64)failure_rate);
-    return -(f32)log(1.0 - rng_function(rng_param)) / (f32)failure_rate;
+    return -(f32)log(1.0 - rmod_msws_rngf(rng)) / (f32)failure_rate;
 }
 
 static f32 find_system_throughput(
@@ -19,7 +18,6 @@ static f32 find_system_throughput(
         const f32* const failure_rate)
 {
     f32 total_failure_rate = 0;
-//    value[0] = effect[0];
     for (u32 i = 0; i < count; ++i)
     {
         if (status[i] == RMOD_ELEMENT_STATUS_WORK)
@@ -43,9 +41,30 @@ static f32 find_system_throughput(
 }
 
 
+static void report_sim_progress(f64 fraction, u32 signs)
+{
+    const u32 limit = (u64)(fraction * signs);
+    fprintf(stdout, "\rSimulation progress (%5.1f %%): [\x1b[32m", 100.0 * fraction);
+    u32 i;
+    for (i = 0; i < limit; ++i)
+    {
+        fputc('=', stdout);
+    }
+    fputc('\x1b', stdout);
+    fputc('[', stdout);
+    fputc('0', stdout);
+    fputc('m', stdout);
+    for (; i < signs; ++i)
+    {
+        fputc('-', stdout);
+    }
+    fputc(']', stdout);
+    fflush(stdout);
+}
+
 rmod_result rmod_simulate_graph(
         const rmod_graph* graph, f32 simulation_duration, u32 simulation_repetitions, rmod_sim_result* p_res_out,
-        f64 (* rng_function)(void*), void* rng_param, f32 repair_limit)
+        f32 repair_limit)
 {
     RMOD_ENTER_FUNCTION;
     rmod_result res = RMOD_RESULT_SUCCESS;
@@ -167,23 +186,6 @@ rmod_result rmod_simulate_graph(
         fails_per_component[i] = 0;
     }
 
-    u32* const child_buffer = lin_jalloc(G_LIN_JALLOCATOR, sizeof(*child_buffer) * total_children);
-    if (!child_buffer)
-    {
-        RMOD_ERROR("Failed lin_jalloc(%g, %zu)", G_LIN_JALLOCATOR, sizeof(*child_buffer) * total_children);
-        res = RMOD_RESULT_NOMEM;
-        jfree(fails_per_component);
-        goto end;
-    }
-
-    u32* const parent_buffer = lin_jalloc(G_LIN_JALLOCATOR, sizeof(*parent_buffer) * total_parents);
-    if (!parent_buffer)
-    {
-        RMOD_ERROR("Failed lin_jalloc(%g, %zu)", G_LIN_JALLOCATOR, sizeof(*parent_buffer) * total_parents);
-        res = RMOD_RESULT_NOMEM;
-        jfree(fails_per_component);
-        goto end;
-    }
 
     //  Simulation records
     rmod_sim_result results =
@@ -214,15 +216,17 @@ rmod_result rmod_simulate_graph(
     }
 
 
+    rmod_msws_state rng;
+    rmod_msws_init(&rng, 0, 0, 0, 0);
 #ifndef _WIN32
     struct timespec t_begin;
-    int time_res = clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t_begin);
+    int time_res = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &t_begin);
     assert(time_res >= 0);
 #else
     LARGE_INTEGER t_begin;
     QueryPerformanceCounter(&t_begin);
 #endif
-#define N_MILESTONES 40
+#define N_MILESTONES 100
     u32 milestones[N_MILESTONES] = {0};
     for (u32 i = 0; i < N_MILESTONES; ++i)
     {
@@ -235,19 +239,20 @@ rmod_result rmod_simulate_graph(
     {
         if (sim_i == milestones[milestone])
         {
-            fprintf(stdout, "\rSimulation progress (%5.1f %%): [", (f64)sim_i / (f64)simulation_repetitions * 100);
-            u32 i;
-            for (i = 0; i < milestone; ++i)
-            {
-                fputc('=', stdout);
-            }
-            while (i < N_MILESTONES)
-            {
-                fputc('-', stdout);
-                i += 1;
-            }
-            fputc(']', stdout);
-            fflush(stdout);
+//            fprintf(stdout, "\rSimulation progress (%5.1f %%): [", (f64)sim_i / (f64)simulation_repetitions * 100);
+//            u32 i;
+//            for (i = 0; i < milestone; ++i)
+//            {
+//                fputc('=', stdout);
+//            }
+//            while (i < N_MILESTONES)
+//            {
+//                fputc('-', stdout);
+//                i += 1;
+//            }
+//            fputc(']', stdout);
+//            fflush(stdout);
+            report_sim_progress((f64)milestone / N_MILESTONES, 40);
             milestone += 1;
         }
         f32 system_failure_rate = 0.0f;
@@ -267,7 +272,7 @@ rmod_result rmod_simulate_graph(
         while (time < simulation_duration)
         {
             //  Find time step
-            f32 dt = find_next_failure(rng_function, rng_param, system_failure_rate);
+            f32 dt = find_next_failure(&rng, system_failure_rate);
             f32 next_t = time + dt;
             if (next_t > simulation_duration)
             {
@@ -283,7 +288,7 @@ rmod_result rmod_simulate_graph(
             //  Find which failure occurs next
             u32 fail_idx = -1;
             f32 failed_so_far = 0.0f;
-            const f32 fail_measure = (f32) rng_function(rng_param) * system_failure_rate;
+            const f32 fail_measure = (f32) find_next_failure(&rng, system_failure_rate) * system_failure_rate;
             for (u32 i = 0; i < node_count; ++i)
             {
                 if (node_status[i] != RMOD_ELEMENT_STATUS_WORK)
@@ -299,7 +304,6 @@ rmod_result rmod_simulate_graph(
             }
             assert(fail_idx < node_count);
             assert(fail_idx != -1);
-//            printf("\n%u Failed %u\n", sim_i, fail_idx);
             const rmod_failure_type type = failure_type[fail_idx];
             node_status[fail_idx] = RMOD_ELEMENT_STATUS_DOWN;
             fails_per_component[fail_idx] += 1;
@@ -313,21 +317,77 @@ rmod_result rmod_simulate_graph(
                 //  Deactivate all components which provide/depend only on this one, since there is no point in having
                 //  them running while the only part they depend on/provide for is not online
                 //  Failure (may) be acceptable
+
+                // Check for all nodes after the failed node if they should be switched off
+                u32 working_parents = 0;
+                for (u32 i = fail_idx + 1; i < node_count; ++i)
+                {
+                    //  Is the node even working
+                    if (node_status[i] != RMOD_ELEMENT_STATUS_WORK)
+                    {
+                        continue;
+                    }
+                    //  Count how many of its parents are still working
+                    for (u32 j = 0; j < parent_count[i]; ++j)
+                    {
+                        working_parents += node_status[parent_ids[i][j]] == RMOD_ELEMENT_STATUS_WORK;
+                    }
+                    if (working_parents == 0)
+                    {
+                        //  No more working parents, switch it off
+                        node_status[i] = RMOD_ELEMENT_STATUS_INACTIVE;
+                    }
+                }
+                if (!working_parents)
+                {
+                    //  Last node in the graph has no more working parents
+                    goto repair;
+                }
+
+                u32 working_children = 0;
+                //  Check for all nodes before the failed node if they should be switched off
+                for (u32 i = fail_idx; i > 0; --i)
+                {
+                    //  Is the node even working
+                    if (node_status[i - 1] != RMOD_ELEMENT_STATUS_WORK)
+                    {
+                        continue;
+                    }
+                    //  Count how many of its children are still working
+                    for (u32 j = 0; j < child_count[i - 1]; ++j)
+                    {
+                        working_children += node_status[child_ids[i - 1][j]] == RMOD_ELEMENT_STATUS_WORK;
+                    }
+                    if (working_children == 0)
+                    {
+                        //  No more working parents, switch it off
+                        node_status[i - 1] = RMOD_ELEMENT_STATUS_INACTIVE;
+                    }
+                }
+                if (!working_children)
+                {
+                    //  First node in the graph has no more working children
+                    //  Literally should not happen
+                    assert(false);
+                }
                 throughput = find_system_throughput(&system_failure_rate, node_count, node_status, parent_count, parent_ids, effect, value, failure_rate);
             }
 
             if (throughput < repair_limit || type == RMOD_FAILURE_TYPE_CRITICAL)
             {
+            repair:
                 //  Need to maintain, so repair all systems
                 for (u32 i = 0; i < node_count; ++i)
                 {
                     if (node_status[i] != RMOD_ELEMENT_STATUS_WORK)
                     {
-                        total_cost += cost[i];
+                        //  Add repair cost if element was down, but not if it was just shut down
+                        total_cost += node_status[i] == RMOD_ELEMENT_STATUS_DOWN ? cost[i] : 0.0f;
                         node_status[i] = RMOD_ELEMENT_STATUS_WORK;
                     }
                 }
-                throughput = find_system_throughput(&system_failure_rate, node_count, node_status, parent_count, parent_ids, effect, value, failure_rate);
+                throughput = full_throughput;
+                system_failure_rate = full_fail_rate;
                 maintenance_count += 1;
             }
 
@@ -341,14 +401,13 @@ rmod_result rmod_simulate_graph(
     }
     results.n_components = node_count;
     results.failures_per_component = fails_per_component;
-    fprintf(stdout, "\rSimulation progress (100.0 %%): [========================================]\n");
-    fflush(stdout);
-
+    report_sim_progress(1.0, 40);
 #ifndef _WIN32
     struct timespec t_end;
-    time_res = clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t_end);
+    time_res = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &t_end);
     assert(time_res >= 0);
     results.duration = (f32)(t_end.tv_sec - t_begin.tv_sec);
+    results.max_flow = full_throughput;
     {
         f64 ns = (f64)(t_end.tv_nsec - t_begin.tv_nsec);
         results.duration += (f32)(ns / 1e9);
@@ -359,10 +418,9 @@ rmod_result rmod_simulate_graph(
     QueryPerformanceFrequency(&freq);
     results.duration = (f32)((f64)(t_end.QuadPart - t_begin.QuadPart) / (f64)freq.QuadPart);
 #endif
-    fprintf(stdout, "\nSim concluded in %g seconds\n", results.duration);
+    fprintf(stdout, "\nSimulation took in %g seconds of CPU time\n", results.duration);
 
-    lin_jfree(G_LIN_JALLOCATOR, parent_buffer);
-    lin_jfree(G_LIN_JALLOCATOR, child_buffer);
+
     lin_jfree(G_LIN_JALLOCATOR, node_status);
     lin_jfree(G_LIN_JALLOCATOR, value);
     lin_jfree(G_LIN_JALLOCATOR, child_ids);
@@ -388,12 +446,16 @@ typedef struct
     u32 reps_to_do;
     f32 duration;
     f32 repair_limit;
+    f32 full_fail_rate;
+    f32 full_throughput;
     const f32* failure_rate;
     const f32* cost;
     const f32* effect;
     const rmod_failure_type* failure_type;
     const u32* parent_count;
     const rmod_graph_node_id*const* parent_ids;
+    const u32* child_count;
+    const rmod_graph_node_id* const* child_ids;
 } simulation_parameters;
 
 typedef struct
@@ -422,7 +484,11 @@ static rmod_result simulate_worker(const simulation_parameters* params, rmod_msw
     const rmod_failure_type* failure_type = params->failure_type;
     const u32* parent_count = params->parent_count;
     const rmod_graph_node_id*const* parent_ids = params->parent_ids;
+    const u32* child_count = params->child_count;
+    const rmod_graph_node_id*const* child_ids = params->child_ids;
     const f32 repair_limit = params->repair_limit;
+    const f32 full_throughput = params->full_throughput;
+    const f32 full_fail_rate = params->full_fail_rate;
 
 
     rmod_sim_result results =
@@ -457,7 +523,7 @@ static rmod_result simulate_worker(const simulation_parameters* params, rmod_msw
         while (time < duration)
         {
             //  Find time step
-            f32 dt = (f32) find_next_failure((double(*)(void*))(rmod_msws_rngf), rng, system_failure_rate);
+            f32 dt = (f32) find_next_failure(rng, system_failure_rate);
             f32 next_t = time + dt;
             if (next_t > duration)
             {
@@ -499,12 +565,68 @@ static rmod_result simulate_worker(const simulation_parameters* params, rmod_msw
 
             if (type == RMOD_FAILURE_TYPE_ACCEPTABLE)
             {
+                //  Deactivate all components which provide/depend only on this one, since there is no point in having
+                //  them running while the only part they depend on/provide for is not online
                 //  Failure (may) be acceptable
+
+                u32 working_parents = 0;
+                // Check for all nodes after the failed node if they should be switched off
+                for (u32 i = fail_idx + 1; i < node_count; ++i)
+                {
+                    //  Is the node even working
+                    if (node_status[i] != RMOD_ELEMENT_STATUS_WORK)
+                    {
+                        continue;
+                    }
+                    //  Count how many of its parents are still working
+                    for (u32 j = 0; j < parent_count[i]; ++j)
+                    {
+                        working_parents += node_status[parent_ids[i][j]] == RMOD_ELEMENT_STATUS_WORK;
+                    }
+                    if (working_parents == 0)
+                    {
+                        //  No more working parents, switch it off
+                        node_status[i] = RMOD_ELEMENT_STATUS_INACTIVE;
+                    }
+                }
+                if (!working_parents)
+                {
+                    //  Last node in the graph has no more working parents
+                    goto repair;
+                }
+
+                u32 working_children = 0;
+                //  Check for all nodes before the failed node if they should be switched off
+                for (u32 i = fail_idx; i > 0; --i)
+                {
+                    //  Is the node even working
+                    if (node_status[i - 1] != RMOD_ELEMENT_STATUS_WORK)
+                    {
+                        continue;
+                    }
+                    //  Count how many of its children are still working
+                    for (u32 j = 0; j < child_count[i - 1]; ++j)
+                    {
+                        working_children += node_status[child_ids[i - 1][j]] == RMOD_ELEMENT_STATUS_WORK;
+                    }
+                    if (working_children == 0)
+                    {
+                        //  No more working parents, switch it off
+                        node_status[i - 1] = RMOD_ELEMENT_STATUS_INACTIVE;
+                    }
+                }
+                if (!working_children)
+                {
+                    //  First node in the graph has no more working children
+                    //  Literally should not happen
+                    assert(false);
+                }
                 throughput = find_system_throughput(&system_failure_rate, node_count, node_status, parent_count, parent_ids, effect, value, failure_rate);
             }
 
             if (throughput < repair_limit || type == RMOD_FAILURE_TYPE_CRITICAL)
             {
+            repair:
                 //  Need to maintain, so repair all systems
                 for (u32 i = 0; i < node_count; ++i)
                 {
@@ -514,7 +636,9 @@ static rmod_result simulate_worker(const simulation_parameters* params, rmod_msw
                         node_status[i] = RMOD_ELEMENT_STATUS_WORK;
                     }
                 }
-                throughput = find_system_throughput(&system_failure_rate, node_count, node_status, parent_count, parent_ids, effect, value, failure_rate);
+                //  Restore system to previously computed failure rates
+                throughput = full_throughput;
+                system_failure_rate = full_fail_rate;
                 maintenance_count += 1;
             }
 
@@ -559,23 +683,6 @@ static void* simulate_graph_worker_wrapper(void* param)
     RMOD_LEAVE_FUNCTION;
     rmod_error_cleanup_thread();
     return NULL;
-}
-
-static void report_sim_progress(f64 fraction, u32 signs)
-{
-    const u32 limit = (u64)(fraction * signs);
-    fprintf(stdout, "\rSimulation progress (% 5.1f %%): [", 100.0 * fraction);
-    u32 i;
-    for (i = 0; i < limit; ++i)
-    {
-        fputc('=', stdout);
-    }
-    for (; i < signs; ++i)
-    {
-        fputc('-', stdout);
-    }
-    fputc(']', stdout);
-    fflush(stdout);
 }
 
 rmod_result rmod_simulate_graph_mt(
@@ -655,6 +762,24 @@ rmod_result rmod_simulate_graph_mt(
         goto failed;
     }
 
+    //      Child counts of each element
+    u32* const child_count = lin_jalloc(G_LIN_JALLOCATOR, sizeof(*child_count) * node_count);
+    if (!child_count)
+    {
+        RMOD_ERROR("Failed lin_jalloc(%p, %zu)", G_LIN_JALLOCATOR, sizeof(*child_count) * node_count);
+        res = RMOD_RESULT_NOMEM;
+        goto failed;
+    }
+
+    //      Child arrays of each element
+    const rmod_graph_node_id** const child_ids = lin_jalloc(G_LIN_JALLOCATOR, sizeof(*child_ids) * node_count);
+    if (!child_ids)
+    {
+        RMOD_ERROR("Failed lin_jalloc(%p, %zu)", G_LIN_JALLOCATOR, sizeof(*child_ids) * node_count);
+        res = RMOD_RESULT_NOMEM;
+        goto failed;
+    }
+
     //      Prepare invariant values (failure rates, cost, effect, failure, parent counts, and parent arrays)
     for (u32 i = 0; i < node_count; ++i)
     {
@@ -666,6 +791,8 @@ rmod_result rmod_simulate_graph_mt(
         failure_type[i] = type->failure_type;
         parent_count[i] = node->parent_count;
         parent_ids[i] = node->parents;
+        child_count[i] = node->child_count;
+        child_ids[i] = node->children;
     }
 
     sim_params.node_count = node_count;
@@ -673,6 +800,8 @@ rmod_result rmod_simulate_graph_mt(
     sim_params.effect = effect;
     sim_params.parent_count = parent_count;
     sim_params.parent_ids = parent_ids;
+    sim_params.child_count = child_count;
+    sim_params.child_ids = child_ids;
     sim_params.failure_type = failure_type;
     sim_params.cost = cost;
 
@@ -787,9 +916,12 @@ rmod_result rmod_simulate_graph_mt(
         goto failed;
     }
 
+    sim_params.full_fail_rate = full_fail_rate;
+    sim_params.full_throughput = full_throughput;
+
 #ifndef _WIN32
     struct timespec t_begin;
-    int time_res = clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t_begin);
+    int time_res = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &t_begin);
     assert(time_res >= 0);
 #else
     LARGE_INTEGER t_begin;
@@ -814,7 +946,6 @@ rmod_result rmod_simulate_graph_mt(
     }
 
     //  Wait for workers and report their progress
-    fputc('\n', stdout);
     report_sim_progress(0.0, 40);
     u32 sim_reps_total;
     struct timespec sleep = {.tv_nsec = 100000000}; //    100 milliseconds
@@ -834,7 +965,7 @@ rmod_result rmod_simulate_graph_mt(
 
 #ifndef _WIN32
     struct timespec t_end;
-    time_res = clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t_end);
+    time_res = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &t_end);
     assert(time_res >= 0);
 #else
     LARGE_INTEGER t_end, freq;
@@ -885,7 +1016,8 @@ rmod_result rmod_simulate_graph_mt(
         final_results.total_costs += thrd_res->total_costs;
         final_results.total_flow += thrd_res->total_flow;
     }
-    fprintf(stdout, "\nSim concluded in %g seconds\n", final_results.duration);
+    final_results.max_flow = full_throughput;
+    fprintf(stdout, "\nSimulation took %g seconds of CPU time\n", final_results.duration);
 
     lin_jfree(G_LIN_JALLOCATOR, fails_array);
     lin_jfree(G_LIN_JALLOCATOR, element_status_array);
@@ -894,6 +1026,8 @@ rmod_result rmod_simulate_graph_mt(
     lin_jfree(G_LIN_JALLOCATOR, rng_states_by_thread);
     lin_jfree(G_LIN_JALLOCATOR, reps_done_by_workers);
     lin_jfree(G_LIN_JALLOCATOR, worker_information);
+    lin_jfree(G_LIN_JALLOCATOR, child_ids);
+    lin_jfree(G_LIN_JALLOCATOR, child_count);
     lin_jfree(G_LIN_JALLOCATOR, parent_ids);
     lin_jfree(G_LIN_JALLOCATOR, parent_count);
     lin_jfree(G_LIN_JALLOCATOR, failure_type);

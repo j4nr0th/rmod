@@ -5,16 +5,11 @@
 #ifndef JSTR_SSTREAM_H
 #define JSTR_SSTREAM_H
 #include "sformatted.h"
+#include "../mem/jalloc.h"
 
 typedef struct string_stream_struct string_stream;
-struct string_stream_struct
-{
-    linear_jallocator* p_allocator;
-    char* base;
-    size_t length;
-};
 
-string_stream string_stream_create(linear_jallocator* allocator);
+size_t string_stream_create(linear_jallocator* lin_jallocator, jallocator* allocator, string_stream** p_stream);
 
 size_t string_stream_add(string_stream* stream, const char* fmt, ...);
 

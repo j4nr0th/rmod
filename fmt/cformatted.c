@@ -212,12 +212,21 @@ size_t vacprintf(linear_jallocator* support_allocator, const char* fmt, va_list 
                     if (len != (size_t)-1)
                     {
                         used += len;
+                    }if (len != (size_t)-1)
+                    {
+                        if (precision_set && len > precision)
+                        {
+                            len = precision;
+                        }
+
+                        used += len;
                     }
                 }
                 else
                 {
                     //  Byte string
-                    for (const char* str = va_arg(args, const char*); *str; ++str)
+                    uint_fast64_t so_far = 0;
+                    for (const char* str = va_arg(args, const char*); *str && (!precision_set || so_far < precision); ++str, ++so_far)
                     {
                         used += 1;
                     }

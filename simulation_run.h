@@ -22,6 +22,7 @@ struct rmod_sim_result_struct
 {
     u64 sim_count;
     f32 total_flow;
+    f32 max_flow;
     u64 total_maintenance_visits;
     f32 total_costs;
     f32 duration;
@@ -31,7 +32,7 @@ struct rmod_sim_result_struct
 
 rmod_result rmod_simulate_graph(
         const rmod_graph* graph, f32 simulation_duration, u32 simulation_repetitions, rmod_sim_result* p_res_out,
-        f64 (* rng_function)(void*), void* rng_param, f32 repair_limit);
+        f32 repair_limit);
 
 rmod_result rmod_simulate_graph_mt(
         const rmod_graph* graph, f32 simulation_duration, u32 simulation_repetitions, rmod_sim_result* p_res_out,

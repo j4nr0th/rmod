@@ -36,4 +36,6 @@ void* lin_jalloc_get_current(linear_jallocator* allocator);
 
 void lin_jalloc_set_current(linear_jallocator* allocator, void* ptr);
 
+uint_fast64_t lin_jallocator_get_size(const linear_jallocator* jallocator);
+
 #endif //RMOD_LIN_ALLOC_H

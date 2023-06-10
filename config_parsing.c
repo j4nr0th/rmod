@@ -5,7 +5,7 @@
 #include "config_parsing.h"
 #include <inttypes.h>
 
-static rmod_result report_child_mismatch(const rmod_xml_element* xml_element, const rmod_config_entry* cfg_element)
+static rmod_result report_child_mismatch(const rmod_xml_element* xml_element, const rmod_xml_config_entry* cfg_element)
 {
     size_t n_chars = sizeof("XML element \"\" had children [], but configuration specification wanted []") + xml_element->name.len;
     for (u32 i = 0; i < xml_element->child_count; ++i)
@@ -67,106 +67,7 @@ static rmod_result report_child_mismatch(const rmod_xml_element* xml_element, co
     return RMOD_RESULT_BAD_XML;
 }
 
-static inline rmod_result convert_value(const string_segment v, const rmod_config_converter* const converter)
-{
-    RMOD_ENTER_FUNCTION;
-    switch (converter->type)
-    {
-    case RMOD_CFG_VALUE_UINT:
-    {
-        const rmod_config_converter_uint* this = &converter->c_uint;
-        //  Convert to uint
-        char* end_p = NULL;
-        uintmax_t val = strtoumax(v.begin, &end_p, 10);
-        if (end_p != v.begin + v.len)
-        {
-            RMOD_ERROR("Failed conversion to uint due to invalid value \"%.*s\"", v.len, v.begin);
-            goto failed;
-        }
-        if (val < this->v_min || val > this->v_max)
-        {
-            RMOD_ERROR("Converted value %"PRIuMAX" was outside of allowed range [%"PRIuMAX", %"PRIuMAX"]", val, this->v_min, this->v_max);
-            goto failed;
-        }
-        *this->p_out = val;
-    }
-        break;
-
-    case RMOD_CFG_VALUE_INT:
-    {
-        const rmod_config_converter_int* this = &converter->c_int;
-        //  Convert to int
-        char* end_p = NULL;
-        intmax_t val = strtoimax(v.begin, &end_p, 10);
-        if (end_p != v.begin + v.len)
-        {
-            RMOD_ERROR("Failed conversion to int due to invalid value \"%.*s\"", v.len, v.begin);
-            goto failed;
-        }
-        if (val < this->v_min || val > this->v_max)
-        {
-            RMOD_ERROR("Converted value %"PRIiMAX" was outside of allowed range [%"PRIiMAX", %"PRIiMAX"]", val, this->v_min, this->v_max);
-            goto failed;
-        }
-        *this->p_out = val;
-    }
-        break;
-
-    case RMOD_CFG_VALUE_STR:
-    {
-        const rmod_config_converter_str* this = &converter->c_str;
-        //  Just pass forward to the desired destination
-        *this->p_out = v;
-    }
-        break;
-
-    case RMOD_CFG_VALUE_REAL:
-    {
-        const rmod_config_converter_real * this = &converter->c_real;
-        //  Convert to double
-        char* end_p = NULL;
-        double_t val = strtod(v.begin, &end_p);
-        if (end_p != v.begin + v.len)
-        {
-            RMOD_ERROR("Failed conversion to double due to invalid value \"%.*s\"", v.len, v.begin);
-            goto failed;
-        }
-        if (val < this->v_min || val > this->v_max)
-        {
-            RMOD_ERROR("Converted value %e was outside of allowed range [%e, %e]", val, this->v_min, this->v_max);
-            goto failed;
-        }
-        *this->p_out = val;
-    }
-        break;
-
-    case RMOD_CFG_VALUE_CUSTOM:
-    {
-        const rmod_config_converter_custom* this = &converter->c_custom;
-        //  Pass to custom function
-        if (!this->converter_fn(v, this->user_param, this->p_out))
-        {
-            RMOD_ERROR("Custom convertor function returned false, indicating failed conversion");
-            goto failed;
-        }
-    }
-        break;
-
-    default:
-        RMOD_ERROR("Config element converter has invalid type member");
-        RMOD_LEAVE_FUNCTION;
-        return RMOD_RESULT_STUPIDITY;
-
-    }
-    RMOD_LEAVE_FUNCTION;
-    return RMOD_RESULT_SUCCESS;
-
-failed:
-    RMOD_LEAVE_FUNCTION;
-    return RMOD_RESULT_BAD_VALUE;
-}
-
-static rmod_result recursive_parse_cfg(const rmod_xml_element* xml_element, const rmod_config_entry* cfg_element
+static rmod_result recursive_parse_cfg(const rmod_xml_element* xml_element, const rmod_xml_config_entry* cfg_element
                                        )
 {
     if (cfg_element->child_count != xml_element->child_count)
@@ -190,7 +91,7 @@ static rmod_result recursive_parse_cfg(const rmod_xml_element* xml_element, cons
             const rmod_xml_element* xml_child = xml_element->children + i;
             for (u32 j = 0; j < count; ++j)
             {
-                const rmod_config_entry* cfg_child = cfg_element->child_array + j;
+                const rmod_xml_config_entry* cfg_child = cfg_element->child_array + j;
                 if (compare_string_segment(xml_child->name.len, cfg_child->name, &xml_child->name))
                 {
                     if (matched[i] != -1)
@@ -246,7 +147,7 @@ static rmod_result recursive_parse_cfg(const rmod_xml_element* xml_element, cons
     return RMOD_RESULT_SUCCESS;
 }
 
-rmod_result rmod_parse_xml_configuration(const rmod_xml_element* xml_root, const rmod_config_entry* cfg_root)
+rmod_result rmod_parse_xml_configuration(const rmod_xml_element* xml_root, const rmod_xml_config_entry* cfg_root)
 {
     RMOD_ENTER_FUNCTION;
     rmod_result res;
@@ -278,7 +179,7 @@ end:
     return res;
 }
 
-rmod_result rmod_parse_configuration_file(const char* filename, const rmod_config_entry* cfg_root, rmod_memory_file* pp_mem_file)
+rmod_result rmod_parse_configuration_file(const char* filename, const rmod_xml_config_entry* cfg_root, rmod_memory_file* pp_mem_file)
 {
     RMOD_ENTER_FUNCTION;
     void* const base = lin_jalloc_get_current(G_LIN_JALLOCATOR);

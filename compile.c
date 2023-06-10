@@ -12,40 +12,6 @@ struct chain_dependency_info_struct
     u32* dependency_list;
 };
 
-static rmod_result check_for_cycles(const u32 n_info, const chain_dependency_info* const info_list, const u32 index, const u32 depth, const u32 max_depth)
-{
-    if (depth > max_depth)
-    {
-        return RMOD_RESULT_CYCLICAL_CHAIN_DEPENDENCY;
-    }
-    const chain_dependency_info* info = info_list + index;
-    for (u32 i = 0; i < info->dependency_count; ++i)
-    {
-        rmod_result res = check_for_cycles(n_info, info_list, info->dependency_list[i], depth + 1, max_depth);
-        if (res != RMOD_RESULT_SUCCESS)
-        {
-            return res;
-        }
-    }
-    return RMOD_RESULT_SUCCESS;
-}
-
-static u32 compute_dependants_counts(const chain_dependency_info* const info_list, const u32 index, u32* const count_array)
-{
-    const chain_dependency_info* info = info_list + index;
-    //  Add direct dependencies
-    count_array[index] += info->dependency_count;
-    //  Call recursively for all children
-    u32 child_dependency_total = 0;
-    for (u32 i = 0; i < info->dependency_count; ++i)
-    {
-        child_dependency_total += compute_dependants_counts(info_list, info->dependency_list[i], count_array);
-    }
-    //  Add dependency counts of children
-    count_array[index] += child_dependency_total;
-    return info->dependency_count + child_dependency_total;
-}
-
 static rmod_result copy_element(const rmod_chain_element* const this, rmod_chain_element* const dest)
 {
     RMOD_ENTER_FUNCTION;

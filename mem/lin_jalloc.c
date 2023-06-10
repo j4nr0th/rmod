@@ -184,3 +184,8 @@ void lin_jalloc_set_current(linear_jallocator* allocator, void* ptr)
     assert(ptr >= allocator->base && ptr < allocator->max);
     allocator->current = ptr;
 }
+
+uint_fast64_t lin_jallocator_get_size(const linear_jallocator* jallocator)
+{
+    return jallocator->max - jallocator->base;
+}

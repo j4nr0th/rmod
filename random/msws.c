@@ -1,9 +1,11 @@
 //
 // Created by jan on 3.6.2023.
 //
-
 #include "msws.h"
-#include <assert.h>
+
+#ifndef NDEBUG
+_Atomic u64 MSWS_TIMES_CALLED = 0;
+#endif  //  NDEBUG
 
 void rmod_msws_init(rmod_msws_state* rng, u64 x0, u64 x1, u64 w0, u64 w1)
 {
@@ -26,12 +28,15 @@ uint_fast64_t rmod_msws_rng(rmod_msws_state* rng)
     rng->x1 *= rng->x1;
     (rng->x1 += (rng->w1 += rng->s1));
     rng->x1 = ((rng->x1 >> 32)|(rng->x1 << 32));
-
     return tmp ^ rng->x1;
+
 }
 
 double rmod_msws_rngf(rmod_msws_state* rng)
 {
+#ifndef NDEBUG
+    MSWS_TIMES_CALLED += 1;
+#endif //NDEBUG
     if (rng->has_remaining)
     {
         rng->has_remaining = false;
@@ -45,8 +50,6 @@ double rmod_msws_rngf(rmod_msws_state* rng)
     static_assert((UINT32_MAX)/(4294967296.0) < 1.0);
     double f1 = ((double)(v.v32[1]) / (double)(4294967296));
     double f2 = ((double)(v.v32[0]) / (double)(4294967296));
-//    float f1 = (float)(double)((double)(v.v64 & UINT32_MAX) / (double)(4294967296));
-//    float f2 = (float)((double)(v.v64 >> 32) / (double)(4294967296));
     rng->has_remaining = true;
     rng->remaining = f1;
     return f2;

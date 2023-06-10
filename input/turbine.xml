@@ -1,0 +1,499 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rmod [
+        <!ELEMENT rmod (block|chain|include)*>
+        <!ELEMENT block (name,mtbf,effect,failure,cost)>
+        <!ELEMENT name (#PCDATA)>
+        <!ELEMENT mtbf (#PCDATA)>
+        <!ELEMENT effect (#PCDATA)>
+        <!ELEMENT failure (#PCDATA)>
+        <!ELEMENT cost (#PCDATA)>
+        <!ELEMENT chain (name,first,last,element+)>
+        <!ELEMENT first (#PCDATA)>
+        <!ELEMENT last (#PCDATA)>
+        <!ELEMENT element (type,label,(child|parent)*)>
+        <!ATTLIST element
+                etype (block|chain) #REQUIRED>
+        <!ELEMENT type (#PCDATA)>
+        <!ELEMENT label (#PCDATA)>
+        <!ELEMENT child (#PCDATA)>
+        <!ELEMENT parent (#PCDATA)>
+        <!ELEMENT include (#PCDATA)>
+        ]>
+<rmod>
+    <include>column_element.xml</include>
+    <include>drive_train.xml</include>
+
+    <block>
+        <name>placeholder</name>
+        <mtbf>0</mtbf>
+        <effect>1</effect>
+        <failure>critical</failure>
+        <cost>0</cost>
+    </block>
+
+    <block>
+        <name>hydraulic</name>
+        <mtbf>4.76</mtbf>
+        <effect>0.35</effect>
+        <failure>critical</failure>
+        <cost>1</cost>
+    </block>
+
+    <block>
+        <name>anemometer</name>
+        <mtbf>25</mtbf>
+        <effect>0.25</effect>
+        <failure>critical</failure>
+        <cost>1</cost>
+    </block>
+
+    <block>
+        <name>sensors</name>
+        <mtbf>11.11</mtbf>
+        <effect>0.10</effect>
+        <failure>critical</failure>
+        <cost>1</cost>
+    </block>
+
+    <block>
+        <name>yaw system</name>
+        <mtbf>33.33</mtbf>
+        <effect>0.3</effect>
+        <failure>critical</failure>
+        <cost>1</cost>
+    </block>
+
+    <block>
+        <name>other</name>
+        <mtbf>3.85</mtbf>
+        <effect>0.1</effect>
+        <failure>critical</failure>
+        <cost>1</cost>
+    </block>
+
+    <chain>
+        <name>turbine</name>
+        <first>in</first>
+        <last>out2</last>
+        
+        <element etype="block">
+            <type>placeholder</type>
+            <label>in</label>
+            <child>column00</child>
+            <child>column01</child>
+            <child>column02</child>
+            <child>column03</child>
+            <child>column04</child>
+            <child>column05</child>
+            <child>column06</child>
+            <child>column07</child>
+            <child>column08</child>
+            <child>column09</child>
+            <child>column10</child>
+            <child>column11</child>
+            <child>column12</child>
+            <child>column13</child>
+            <child>column14</child>
+            <child>column15</child>
+            <child>column16</child>
+            <child>column17</child>
+            <child>column18</child>
+            <child>column19</child>
+            <child>column20</child>
+            <child>column21</child>
+            <child>column22</child>
+            <child>column23</child>
+        </element>
+
+        <element etype="block">
+            <type>placeholder</type>
+            <label>out</label>
+            <parent>drivetrain00</parent>
+            <parent>drivetrain01</parent>
+            <parent>drivetrain02</parent>
+            <parent>drivetrain03</parent>
+            <parent>drivetrain04</parent>
+            <parent>drivetrain05</parent>
+            <parent>drivetrain06</parent>
+            <parent>drivetrain07</parent>
+            <parent>drivetrain08</parent>
+            <parent>drivetrain09</parent>
+            <parent>drivetrain10</parent>
+            <parent>drivetrain11</parent>
+            <parent>drivetrain12</parent>
+            <parent>drivetrain13</parent>
+            <parent>drivetrain14</parent>
+            <parent>drivetrain15</parent>
+            <parent>drivetrain16</parent>
+            <parent>drivetrain17</parent>
+            <parent>drivetrain18</parent>
+            <parent>drivetrain19</parent>
+            <parent>drivetrain20</parent>
+            <parent>drivetrain21</parent>
+            <parent>drivetrain22</parent>
+            <parent>drivetrain23</parent>
+            <child>hydraulic subsystem</child>
+            <child>system anemometer</child>
+            <child>system sensors</child>
+            <child>YCT</child>
+            <child>some shit</child>
+        </element>
+
+        <element etype="chain">
+            <type>column</type>
+            <label>column00</label>
+            <parent>in</parent>
+            <child>drivetrain00</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain00</label>
+            <parent>column00</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column01</label>
+            <parent>in</parent>
+            <child>drivetrain01</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain01</label>
+            <parent>column01</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column02</label>
+            <parent>in</parent>
+            <child>drivetrain02</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain02</label>
+            <parent>column02</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column03</label>
+            <parent>in</parent>
+            <child>drivetrain03</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain03</label>
+            <parent>column03</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column04</label>
+            <parent>in</parent>
+            <child>drivetrain04</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain04</label>
+            <parent>column04</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column05</label>
+            <parent>in</parent>
+            <child>drivetrain05</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain05</label>
+            <parent>column05</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column06</label>
+            <parent>in</parent>
+            <child>drivetrain06</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain06</label>
+            <parent>column06</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column07</label>
+            <parent>in</parent>
+            <child>drivetrain07</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain07</label>
+            <parent>column07</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column08</label>
+            <parent>in</parent>
+            <child>drivetrain08</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain08</label>
+            <parent>column08</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column09</label>
+            <parent>in</parent>
+            <child>drivetrain09</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain09</label>
+            <parent>column09</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column10</label>
+            <parent>in</parent>
+            <child>drivetrain10</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain10</label>
+            <parent>column10</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column11</label>
+            <parent>in</parent>
+            <child>drivetrain11</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain11</label>
+            <parent>column11</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column12</label>
+            <parent>in</parent>
+            <child>drivetrain12</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain12</label>
+            <parent>column12</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column13</label>
+            <parent>in</parent>
+            <child>drivetrain13</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain13</label>
+            <parent>column13</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column14</label>
+            <parent>in</parent>
+            <child>drivetrain14</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain14</label>
+            <parent>column14</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column15</label>
+            <parent>in</parent>
+            <child>drivetrain15</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain15</label>
+            <parent>column15</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column16</label>
+            <parent>in</parent>
+            <child>drivetrain16</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain16</label>
+            <parent>column16</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column17</label>
+            <parent>in</parent>
+            <child>drivetrain17</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain17</label>
+            <parent>column17</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column18</label>
+            <parent>in</parent>
+            <child>drivetrain18</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain18</label>
+            <parent>column18</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column19</label>
+            <parent>in</parent>
+            <child>drivetrain19</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain19</label>
+            <parent>column19</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column20</label>
+            <parent>in</parent>
+            <child>drivetrain20</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain20</label>
+            <parent>column20</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column21</label>
+            <parent>in</parent>
+            <child>drivetrain21</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain21</label>
+            <parent>column21</parent>
+            <child>out</child>
+        </element>
+        
+        <element etype="chain">
+            <type>column</type>
+            <label>column22</label>
+            <parent>in</parent>
+            <child>drivetrain22</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain22</label>
+            <parent>column22</parent>
+            <child>out</child>
+        </element>
+
+        <element etype="chain">
+            <type>column</type>
+            <label>column23</label>
+            <parent>in</parent>
+            <child>drivetrain23</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>drivetrain23</label>
+            <parent>column23</parent>
+            <child>out</child>
+        </element>
+
+        <element etype="block">
+            <type>hydraulic</type>
+            <label>hydraulic subsystem</label>
+            <parent>out</parent>
+            <child>out2</child>
+        </element>
+
+        <element etype="block">
+            <type>anemometer</type>
+            <label>system anemometer</label>
+            <parent>out</parent>
+            <child>out2</child>
+        </element>
+
+        <element etype="block">
+            <type>sensors</type>
+            <label>system sensors</label>
+            <parent>out</parent>
+            <child>out2</child>
+        </element>
+
+        <element etype="block">
+            <type>yaw system</type>
+            <label>YCT</label>
+            <parent>out</parent>
+            <child>out2</child>
+        </element>
+
+        <element etype="block">
+            <type>other</type>
+            <label>some shit</label>
+            <parent>out</parent>
+            <child>out2</child>
+        </element>
+
+        <element etype="block">
+            <type>placeholder</type>
+            <label>out2</label>
+            <parent>hydraulic subsystem</parent>
+            <parent>system anemometer</parent>
+            <parent>system sensors</parent>
+            <parent>YCT</parent>
+            <parent>some shit</parent>
+        </element>
+    </chain>
+</rmod>

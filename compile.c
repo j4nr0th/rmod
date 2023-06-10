@@ -137,18 +137,16 @@ rmod_result rmod_compile_graph(
 
     //  Search for proper chain
     u32 chain_count = 0;
-    u32 total_chain_name_memory = 0;
     const rmod_chain* target_chain = NULL;
     for (u32 i = 0; i < n_types; ++i)
     {
         const bool is_chain = p_types[i].header.type_value == RMOD_ELEMENT_TYPE_CHAIN;
-        if (is_chain && strncmp(chain_name, p_types[i].header.type_name.begin, p_types[i].header.type_name.len) == 0)
+        if (is_chain && strlen(chain_name) == p_types[i].header.type_name.len && strncmp(chain_name, p_types[i].header.type_name.begin, p_types[i].header.type_name.len) == 0)
         {
             assert(!target_chain);
             target_chain = &p_types[i].chain;
         }
         chain_count += is_chain;
-        total_chain_name_memory += p_types[i].header.type_name.len + 1;
     }
     if (!target_chain)
     {
@@ -397,6 +395,7 @@ rmod_result rmod_compile_graph(
         //  also be built already
 
         u32 total_element_count = 0;
+        u32 extra_name_bytes = 0;
         for (u32 j = 0; j < chain->element_count; ++j)
         {
             const rmod_chain_element* element = chain->chain_elements + j;
@@ -408,6 +407,7 @@ rmod_result rmod_compile_graph(
                 break;
             case RMOD_ELEMENT_TYPE_CHAIN:
                 total_element_count += element_type->chain.element_count;
+                extra_name_bytes += element_type->chain.name_bytes_total + element_type->chain.element_count * (element->label.len + 3);
                 break;
             default:RMOD_ERROR("Element type \"%.*s\" had invalid type", element_type->header.type_name.len, element_type->header.type_name.begin);
             res = RMOD_RESULT_BAD_XML;
@@ -427,7 +427,17 @@ rmod_result rmod_compile_graph(
             }
             memset(new_element_array + chain->element_count, 0, (total_element_count - chain->element_count) * sizeof*new_element_array);
             chain->chain_elements = new_element_array;
+            assert(!chain->name_buffer);
+            char* name_buffer = jrealloc(chain->name_buffer, extra_name_bytes);
+            if (!name_buffer)
+            {
+                RMOD_ERROR("Failed jrealloc(%p, %zu)", chain->name_buffer, extra_name_bytes);
+                res = RMOD_RESULT_NOMEM;
+                goto failed;
+            }
+            chain->name_buffer = name_buffer;
         }
+        u32 name_pos = 0;
 
         //  Now performa a topological sort of the elements
         rmod_chain_element* const sorted_array = lin_jalloc(G_LIN_JALLOCATOR, total_element_count * sizeof(*sorted_array));
@@ -577,7 +587,11 @@ rmod_result rmod_compile_graph(
                         }
                         goto failed;
                     }
-                    element_copy[k].label.len = 0;
+                    const size_t new_name_len = snprintf(chain->name_buffer + name_pos, extra_name_bytes - name_pos, "%.*s::%.*s",e_replaced.label.len, e_replaced.label.begin, sub_chain->chain_elements[k].label.len, sub_chain->chain_elements[k].label.begin);
+                    assert(new_name_len == 2 + e_replaced.label.len + sub_chain->chain_elements[k].label.len);
+                    element_copy[k].label.begin = chain->name_buffer + name_pos;
+                    name_pos += new_name_len;
+                    element_copy[k].label.len = new_name_len;
                 }
 
                 //  Correct all parent-child relations of the elements proceeding and following this one
@@ -621,6 +635,7 @@ rmod_result rmod_compile_graph(
 
                 //  Move loop index forward
             }
+            chain->name_bytes_total = name_pos;
         }
 
         assert(chain->element_count == total_element_count);
@@ -670,7 +685,7 @@ rmod_result rmod_compile_graph(
         u32 type_index;
         for (type_index = 0; type_index < unique_types; ++type_index)
         {
-            if (strncmp((const char*)type_array[type_index].name, block_type->header.type_name.begin, block_type->header.type_name.len) == 0)
+            if (strlen((const char* restrict)type_array[type_index].name) == block_type->header.type_name.len  && strncmp((const char*)type_array[type_index].name, block_type->header.type_name.begin, block_type->header.type_name.len) == 0)
             {
                 //  Was already put in there
                 break;
@@ -690,7 +705,7 @@ rmod_result rmod_compile_graph(
             name_buffer[block_type->header.type_name.len] = 0;
             type_array[unique_types].name = name_buffer;
             type_array[unique_types].failure_type = block_type->failure_type;
-            type_array[unique_types].failure_rate = (block_type->mtbf == 0.0) ? INFINITY : 1.0f / block_type->mtbf;
+            type_array[unique_types].failure_rate = (block_type->mtbf == 0.0) ? 0 : 1.0f / block_type->mtbf;
             type_array[unique_types].effect = block_type->effect;
             type_array[unique_types].cost = block_type->cost;
             unique_types += 1;
@@ -781,7 +796,7 @@ rmod_result rmod_compile_graph(
         name_copy[target_chain->header.type_name.len] = 0;
     }
     p_out->graph_type = name_copy;
-
+    p_out->parent = target_chain;
 
     RMOD_LEAVE_FUNCTION;
     return RMOD_RESULT_SUCCESS;

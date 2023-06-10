@@ -267,7 +267,26 @@ static void print_xml_element_to_file(const rmod_xml_element * e, const u32 dept
 rmod_result rmod_serialize_xml(rmod_xml_element* root, FILE* f_out)
 {
     RMOD_ENTER_FUNCTION;
-    fprintf(f_out, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
+    fprintf(f_out, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE rmod [\n"
+                   "        <!ELEMENT rmod (block|chain|include)*>\n"
+                   "        <!ELEMENT block (name,mtbf,effect,failure,cost)>\n"
+                   "        <!ELEMENT name (#PCDATA)>\n"
+                   "        <!ELEMENT mtbf (#PCDATA)>\n"
+                   "        <!ELEMENT effect (#PCDATA)>\n"
+                   "        <!ELEMENT failure (#PCDATA)>\n"
+                   "        <!ELEMENT cost (#PCDATA)>\n"
+                   "        <!ELEMENT chain (name,first,last,element+)>\n"
+                   "        <!ELEMENT first (#PCDATA)>\n"
+                   "        <!ELEMENT last (#PCDATA)>\n"
+                   "        <!ELEMENT element (type,label,(child|parent)*)>\n"
+                   "        <!ATTLIST element\n"
+                   "                etype (block|chain) #REQUIRED>\n"
+                   "        <!ELEMENT type (#PCDATA)>\n"
+                   "        <!ELEMENT label (#PCDATA)>\n"
+                   "        <!ELEMENT child (#PCDATA)>\n"
+                   "        <!ELEMENT parent (#PCDATA)>\n"
+                   "        <!ELEMENT include (#PCDATA)>\n"
+                   "        ]>");
     print_xml_element_to_file(root, 0, f_out);
     RMOD_LEAVE_FUNCTION;
     return RMOD_RESULT_SUCCESS;

@@ -70,6 +70,8 @@ struct rmod_chain_struct
     u32 i_first;
     u32 i_last;
     rmod_chain_element* chain_elements;
+    char* name_buffer;
+    u32 name_bytes_total;
     bool compiled;
 };
 

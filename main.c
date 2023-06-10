@@ -145,7 +145,7 @@ int main(int argc, const char* argv[])
     rmod_msws_state rng;
     rmod_msws_init(&rng, 0, 0, 0, 0);
 
-    rmod_sim_result results = {};
+    rmod_sim_result results = {0};
     printf("Simulating graph built from chain \"%s\" containing %"PRIuFAST32" individual nodes\n", graph_a.graph_type, graph_a.node_count);
     if (thrd_count < 2)
     {
@@ -164,15 +164,36 @@ int main(int argc, const char* argv[])
         }
     }
 
-    printf("Simulation results (took %g s for %lu runs, or %g s per run):\n\tAvg flow: %g\n\tAvg failures: %g\n\tAvg costs: %g\n", results.duration, results.sim_count, (f64)results.duration / (f64)results.sim_count, (f64)(results.total_flow)/(f64)results.sim_count/sim_time, (f64)(results.total_failures)/(f64)results.sim_count, (f64)(results.total_costs)/(f64)results.sim_count);
+#ifndef NDEBUG
+    printf("Rng was called %"PRIu64" times\n", MSWS_TIMES_CALLED);
+#endif //NDEBUG
+
+    printf("Simulation results (took %g s for %lu runs, or %g s per run):\n\tAvg flow: %g\n\tAvg maintenance visits: %g\n\tAvg costs: %g\n", results.duration, results.sim_count, (f64)results.duration / (f64)results.sim_count, (f64)(results.total_flow)/(f64)results.sim_count/sim_time, (f64)(results.total_maintenance_visits) / (f64)results.sim_count, (f64)(results.total_costs) / (f64)results.sim_count);
 
     printf("Mean failures per component:\n");
+    u32* const fails_per_type = lin_jalloc(G_LIN_JALLOCATOR, sizeof(*fails_per_type) * graph_a.type_count);
+    if (!fails_per_type)
+    {
+        RMOD_ERROR_CRIT("Failed allocating memory for array of fails per component type: failed lin_jalloc(%p, %zu)", G_LIN_JALLOCATOR, sizeof(*fails_per_type) * graph_a.type_count);
+    }
+    memset(fails_per_type, 0, sizeof(*fails_per_type) * graph_a.type_count);
     for (u32 i = 0; i < results.n_components; ++i)
     {
         const f64 avg_fails = (f64) results.failures_per_component[i] / (f64) sim_reps;
-        printf("\t%u: %lu (avg of %g, MTBF: %g)\n", i, results.failures_per_component[i], avg_fails, (f64)sim_time / avg_fails);
+        printf("\t%u - %.*s: %lu (avg of %g, MTBF: %g)\n", i, graph_a.parent->chain_elements[i].label.len, graph_a.parent->chain_elements[i].label.begin, results.failures_per_component[i], avg_fails, (f64)sim_time / avg_fails);
+        fails_per_type[graph_a.node_list[i].type_id] += results.failures_per_component[i];
     }
     jfree(results.failures_per_component);
+
+    printf("Failures per type:\n");
+    u64 total_failures = 0;
+    for (u32 i = 0; i < graph_a.type_count; ++i)
+    {
+        printf("\t%s: %u\n", graph_a.type_list[i].name, fails_per_type[i]);
+        total_failures += fails_per_type[i];
+    }
+    lin_jfree(G_LIN_JALLOCATOR, fails_per_type);
+    printf("Total failures: %"PRIu64"\n", total_failures);
 
     printf("Cleaning up\n");
     rmod_destroy_graph(&graph_a);

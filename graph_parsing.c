@@ -1032,6 +1032,7 @@ rmod_result rmod_convert_xml(
             part_count = 0;
             
             //  Convert block relation (parent & child) into relative offsets. This allows for easier merging of chains
+            u32 name_byte_count = 0;
             for (u32 j = 0; j < chain_element_count; ++j)
             {
                 const rmod_chain_element* element = chain_elements + j;
@@ -1043,6 +1044,7 @@ rmod_result rmod_convert_xml(
                 {
                     element->parents[k] -= j;
                 }
+                name_byte_count += element->label.len;
             }
             
 
@@ -1074,6 +1076,8 @@ rmod_result rmod_convert_xml(
                                             .i_first = first_v,
                                             .i_last = last_v,
                                             .compiled = false,
+                                            .name_buffer = NULL,
+                                            .name_bytes_total = name_byte_count,
                                     }
                     };
         }
@@ -1285,6 +1289,7 @@ failed:
                 jfree(this->chain_elements[j].children);
             }
             jfree(this->chain_elements);
+            jfree(this->name_buffer);
         }
     }
     jfree(types);
@@ -1334,7 +1339,7 @@ rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const r
             ADD_STRING_LITERAL("\t<chain>\n");
 
             ADD_STRING_LITERAL("\t\t<name>");
-            ENSURE_BUFFER_SPACE(this->header.type_name.len);
+            ENSURE_BUFFER_SPACE(this->header.type_name.len)
             memcpy(buffer + usage, this->header.type_name.begin, this->header.type_name.len);
             usage += this->header.type_name.len;
             ADD_STRING_LITERAL("</name>\n");
@@ -1350,7 +1355,7 @@ rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const r
                 {
                     ADD_STRING_LITERAL("BLOCK-");
                     u32 len = snprintf(NULL, 0, "%03i", this->i_first);
-                    ENSURE_BUFFER_SPACE(len);
+                    ENSURE_BUFFER_SPACE(len)
                     usage += sprintf(buffer + usage, "%03i", this->i_first);
                 }
             }
@@ -1366,7 +1371,7 @@ rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const r
                 {
                     ADD_STRING_LITERAL("BLOCK-");
                     u32 len = snprintf(NULL, 0, "%03i", this->i_last);
-                    ENSURE_BUFFER_SPACE(len);
+                    ENSURE_BUFFER_SPACE(len)
                     usage += sprintf(buffer + usage, "%03i", this->i_last);
                 }
             }
@@ -1376,7 +1381,7 @@ rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const r
             {
                 const rmod_chain_element* e = this->chain_elements + i;
                 ADD_STRING_LITERAL("\n\t\t<element etype=");
-                ENSURE_BUFFER_SPACE(64);
+                ENSURE_BUFFER_SPACE(64)
                 const char* type_string;
                 switch (types[e->type_id].header.type_value)
                 {
@@ -1404,7 +1409,7 @@ rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const r
                 {
                     ADD_STRING_LITERAL("BLOCK-");
                     u32 len = snprintf(NULL, 0, "%03i", i);
-                    ENSURE_BUFFER_SPACE(len);
+                    ENSURE_BUFFER_SPACE(len)
                     usage += sprintf(buffer + usage, "%03i", i);
                 }
                 ADD_STRING_LITERAL("</label>\n");
@@ -1420,7 +1425,7 @@ rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const r
                     {
                         ADD_STRING_LITERAL("BLOCK-");
                         u32 len = snprintf(NULL, 0, "%03ji", i + e->parents[j]);
-                        ENSURE_BUFFER_SPACE(len);
+                        ENSURE_BUFFER_SPACE(len)
                         usage += sprintf(buffer + usage, "%03ji", i + e->parents[j]);
                     }
                     ADD_STRING_LITERAL("</parent>\n");
@@ -1437,7 +1442,7 @@ rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const r
                     {
                         ADD_STRING_LITERAL("BLOCK-");
                         u32 len = snprintf(NULL, 0, "%03ji", i + e->children[j]);
-                        ENSURE_BUFFER_SPACE(len);
+                        ENSURE_BUFFER_SPACE(len)
                         usage += sprintf(buffer + usage, "%03ji", i + e->children[j]);
                     }
                     ADD_STRING_LITERAL("</child>\n");
@@ -1459,22 +1464,17 @@ rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const r
             ADD_STRING_LITERAL("</name>\n");
 
             ADD_STRING_LITERAL("\t\t<mtbf>");
-            ENSURE_BUFFER_SPACE(64);
+            ENSURE_BUFFER_SPACE(64)
             usage += sprintf(buffer + usage, "%f", this->mtbf);
             ADD_STRING_LITERAL("</mtbf>\n");
 
             ADD_STRING_LITERAL("\t\t<effect>");
-            ENSURE_BUFFER_SPACE(64);
+            ENSURE_BUFFER_SPACE(64)
             usage += sprintf(buffer + usage, "%f", this->effect);
             ADD_STRING_LITERAL("</effect>\n");
 
-            ADD_STRING_LITERAL("\t\t<cost>");
-            ENSURE_BUFFER_SPACE(64);
-            usage += sprintf(buffer + usage, "%f", this->cost);
-            ADD_STRING_LITERAL("</cost>\n");
-
             ADD_STRING_LITERAL("\t\t<failure>");
-            ENSURE_BUFFER_SPACE(64);
+            ENSURE_BUFFER_SPACE(64)
             switch (this->failure_type)
             {
             case RMOD_FAILURE_TYPE_ACCEPTABLE:
@@ -1490,6 +1490,11 @@ rmod_serialize_types(linear_jallocator* allocator, const u32 type_count, const r
                 break;
             }
             ADD_STRING_LITERAL("</failure>\n");
+
+            ADD_STRING_LITERAL("\t\t<cost>");
+            ENSURE_BUFFER_SPACE(64)
+            usage += sprintf(buffer + usage, "%f", this->cost);
+            ADD_STRING_LITERAL("</cost>\n");
 
             ADD_STRING_LITERAL("\t</block>\n");
         }
@@ -1525,6 +1530,7 @@ rmod_result rmod_destroy_types(u32 n_types, rmod_element_type* types)
                 jfree(this->chain_elements[j].children);
             }
             jfree(this->chain_elements);
+            jfree(this->name_buffer);
         }
             break;
         case RMOD_ELEMENT_TYPE_BLOCK:break;

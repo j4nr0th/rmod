@@ -20,6 +20,9 @@ struct rmod_msws_state_struct
     bool has_remaining;
     double remaining;
 };
+#ifndef NDEBUG
+extern _Atomic u64 MSWS_TIMES_CALLED;
+#endif //NDEBUG
 
 void rmod_msws_init(rmod_msws_state* rng, u64 x0, u64 x1, u64 w0, u64 w1);
 

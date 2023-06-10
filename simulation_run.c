@@ -106,6 +106,24 @@ rmod_result rmod_simulate_graph(
         goto end;
     }
 
+    //  Child counts of each element
+    u32* const child_count = lin_jalloc(G_LIN_JALLOCATOR, sizeof(*child_count) * node_count);
+    if (!child_count)
+    {
+        RMOD_ERROR("Failed lin_jalloc(%p, %zu)", G_LIN_JALLOCATOR, sizeof(*child_count) * node_count);
+        res = RMOD_RESULT_NOMEM;
+        goto end;
+    }
+
+    //  Child arrays of each element
+    const rmod_graph_node_id** const child_ids = lin_jalloc(G_LIN_JALLOCATOR, sizeof(*child_ids) * node_count);
+    if (!child_ids)
+    {
+        RMOD_ERROR("Failed lin_jalloc(%p, %zu)", G_LIN_JALLOCATOR, sizeof(*child_ids) * node_count);
+        res = RMOD_RESULT_NOMEM;
+        goto end;
+    }
+
     //  Value of each element (for computing flow through the graph)
     f32* const value = lin_jalloc(G_LIN_JALLOCATOR, sizeof(*value) * node_count);
     if (!value)
@@ -132,7 +150,7 @@ rmod_result rmod_simulate_graph(
         goto end;
     }
 
-
+    u32 total_children = 0, total_parents = 0;
     //  Prepare invariant values (failure rates, cost, effect, failure, parent counts, and parent arrays)
     for (u32 i = 0; i < node_count; ++i)
     {
@@ -142,15 +160,35 @@ rmod_result rmod_simulate_graph(
         cost[i] = type->cost;
         effect[i] = type->effect;
         failure_type[i] = type->failure_type;
-        parent_count[i] = node->parent_count;
+        total_parents += (parent_count[i] = node->parent_count);
+        total_children += (child_count[i] = node->child_count);
         parent_ids[i] = node->parents;
+        child_ids[i] = node->children;
         fails_per_component[i] = 0;
+    }
+
+    u32* const child_buffer = lin_jalloc(G_LIN_JALLOCATOR, sizeof(*child_buffer) * total_children);
+    if (!child_buffer)
+    {
+        RMOD_ERROR("Failed lin_jalloc(%g, %zu)", G_LIN_JALLOCATOR, sizeof(*child_buffer) * total_children);
+        res = RMOD_RESULT_NOMEM;
+        jfree(fails_per_component);
+        goto end;
+    }
+
+    u32* const parent_buffer = lin_jalloc(G_LIN_JALLOCATOR, sizeof(*parent_buffer) * total_parents);
+    if (!parent_buffer)
+    {
+        RMOD_ERROR("Failed lin_jalloc(%g, %zu)", G_LIN_JALLOCATOR, sizeof(*parent_buffer) * total_parents);
+        res = RMOD_RESULT_NOMEM;
+        jfree(fails_per_component);
+        goto end;
     }
 
     //  Simulation records
     rmod_sim_result results =
             {
-            .total_failures = 0,
+            .total_maintenance_visits = 0,
             .total_flow = 0,
             .sim_count = 0,
             .n_components = 0,
@@ -261,6 +299,7 @@ rmod_result rmod_simulate_graph(
             }
             assert(fail_idx < node_count);
             assert(fail_idx != -1);
+//            printf("\n%u Failed %u\n", sim_i, fail_idx);
             const rmod_failure_type type = failure_type[fail_idx];
             node_status[fail_idx] = RMOD_ELEMENT_STATUS_DOWN;
             fails_per_component[fail_idx] += 1;
@@ -271,6 +310,8 @@ rmod_result rmod_simulate_graph(
 
             if (type == RMOD_FAILURE_TYPE_ACCEPTABLE)
             {
+                //  Deactivate all components which provide/depend only on this one, since there is no point in having
+                //  them running while the only part they depend on/provide for is not online
                 //  Failure (may) be acceptable
                 throughput = find_system_throughput(&system_failure_rate, node_count, node_status, parent_count, parent_ids, effect, value, failure_rate);
             }
@@ -294,7 +335,7 @@ rmod_result rmod_simulate_graph(
         }
 
         results.total_flow += total_throughput;
-        results.total_failures += maintenance_count;
+        results.total_maintenance_visits += maintenance_count;
         results.sim_count += 1;
         results.total_costs += total_cost;
     }
@@ -320,8 +361,12 @@ rmod_result rmod_simulate_graph(
 #endif
     fprintf(stdout, "\nSim concluded in %g seconds\n", results.duration);
 
+    lin_jfree(G_LIN_JALLOCATOR, parent_buffer);
+    lin_jfree(G_LIN_JALLOCATOR, child_buffer);
     lin_jfree(G_LIN_JALLOCATOR, node_status);
     lin_jfree(G_LIN_JALLOCATOR, value);
+    lin_jfree(G_LIN_JALLOCATOR, child_ids);
+    lin_jfree(G_LIN_JALLOCATOR, child_count);
     lin_jfree(G_LIN_JALLOCATOR, parent_ids);
     lin_jfree(G_LIN_JALLOCATOR, parent_count);
     lin_jfree(G_LIN_JALLOCATOR, failure_type);
@@ -385,7 +430,7 @@ static rmod_result simulate_worker(const simulation_parameters* params, rmod_msw
             .duration = 0,
             .total_costs = 0,
             .sim_count = 0,
-            .total_failures = 0,
+            .total_maintenance_visits = 0,
             .total_flow = 0,
             .failures_per_component = 0,
             .n_components = 0,
@@ -477,7 +522,7 @@ static rmod_result simulate_worker(const simulation_parameters* params, rmod_msw
         }
 
         results.total_flow += total_throughput;
-        results.total_failures += maintenance_count;
+        results.total_maintenance_visits += maintenance_count;
         results.sim_count += 1;
         results.total_costs += total_cost;
     }
@@ -818,7 +863,7 @@ rmod_result rmod_simulate_graph_mt(
 
             .total_flow = 0,
             .total_costs = 0,
-            .total_failures = 0,
+            .total_maintenance_visits = 0,
 
             .failures_per_component = final_failures,
 #ifndef _WIN32
@@ -836,7 +881,7 @@ rmod_result rmod_simulate_graph_mt(
         {
             final_failures[j] += thrd_res->failures_per_component[j];
         }
-        final_results.total_failures += thrd_res->total_failures;
+        final_results.total_maintenance_visits += thrd_res->total_maintenance_visits;
         final_results.total_costs += thrd_res->total_costs;
         final_results.total_flow += thrd_res->total_flow;
     }

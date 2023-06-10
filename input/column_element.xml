@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rmod [
+        <!ELEMENT rmod (block|chain|include)*>
+        <!ELEMENT block (name,mtbf,effect,failure,cost)>
+        <!ELEMENT name (#PCDATA)>
+        <!ELEMENT mtbf (#PCDATA)>
+        <!ELEMENT effect (#PCDATA)>
+        <!ELEMENT failure (#PCDATA)>
+        <!ELEMENT cost (#PCDATA)>
+        <!ELEMENT chain (name,first,last,element+)>
+        <!ELEMENT first (#PCDATA)>
+        <!ELEMENT last (#PCDATA)>
+        <!ELEMENT element (type,label,(child|parent)*)>
+        <!ATTLIST element
+                etype (block|chain) #REQUIRED>
+        <!ELEMENT type (#PCDATA)>
+        <!ELEMENT label (#PCDATA)>
+        <!ELEMENT child (#PCDATA)>
+        <!ELEMENT parent (#PCDATA)>
+        <!ELEMENT include (#PCDATA)>
+        ]>
+<rmod>
+    <block>
+        <name>blades</name>
+        <mtbf>0.980</mtbf>
+        <effect>1.0</effect>
+        <failure>critical</failure>
+        <cost>1</cost>
+    </block>
+
+    <block>
+        <name>shaft</name>
+        <mtbf>25</mtbf>
+        <effect>1.0</effect>
+        <failure>critical</failure>
+        <cost>1</cost>
+    </block>
+
+    <block>
+        <name>mechanical break</name>
+        <mtbf>100</mtbf>
+        <effect>1.0</effect>
+        <failure>critical</failure>
+        <cost>1</cost>
+    </block>
+
+    <block>
+        <name>hub</name>
+        <mtbf>14.29</mtbf>
+        <effect>1.0</effect>
+        <failure>critical</failure>
+        <cost>1</cost>
+    </block>
+
+    <chain>
+        <name>column</name>
+        <first>turbine blades</first>
+        <last>shaft hub</last>
+        <element etype="block">
+            <type>blades</type>
+            <label>turbine blades</label>
+            <child>shaft core</child>
+        </element>
+
+        <element etype="block">
+            <type>shaft</type>
+            <label>shaft core</label>
+            <parent>turbine blades</parent>
+            <child>mech break</child>
+        </element>
+
+        <element etype="block">
+            <type>mechanical break</type>
+            <label>mech break</label>
+            <parent>shaft core</parent>
+            <child>shaft hub</child>
+        </element>
+
+        <element etype="block">
+            <type>hub</type>
+            <label>shaft hub</label>
+            <parent>mech break</parent>
+        </element>
+    </chain>
+</rmod>

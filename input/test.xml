@@ -1,0 +1,113 @@
+
+<!DOCTYPE rmod [
+        <!ELEMENT rmod (block|chain|include)*>
+        <!ELEMENT block (name,mtbf,effect,failure,cost)>
+        <!ELEMENT name (#PCDATA)>
+        <!ELEMENT mtbf (#PCDATA)>
+        <!ELEMENT effect (#PCDATA)>
+        <!ELEMENT failure (#PCDATA)>
+        <!ELEMENT cost (#PCDATA)>
+        <!ELEMENT chain (name,first,last,element+)>
+        <!ELEMENT first (#PCDATA)>
+        <!ELEMENT last (#PCDATA)>
+        <!ELEMENT element (type,label,(child|parent)*)>
+        <!ATTLIST element
+                etype (block|chain) #REQUIRED>
+        <!ELEMENT type (#PCDATA)>
+        <!ELEMENT label (#PCDATA)>
+        <!ELEMENT child (#PCDATA)>
+        <!ELEMENT parent (#PCDATA)>
+        <!ELEMENT include (#PCDATA)>
+        ]>
+<rmod>
+    <block>
+        <name>b1</name>
+        <mtbf>10</mtbf>
+        <effect>1</effect>
+        <failure>normal</failure>
+        <cost>1</cost>
+    </block>
+
+    <block>
+        <name>b2</name>
+        <mtbf>20</mtbf>
+        <effect>2</effect>
+        <failure>normal</failure>
+        <cost>2</cost>
+    </block>
+
+    <block>
+        <name>b3</name>
+        <mtbf>30</mtbf>
+        <effect>3</effect>
+        <failure>normal</failure>
+        <cost>3</cost>
+    </block>
+
+    <block>
+        <name>b4</name>
+        <mtbf>40</mtbf>
+        <effect>4</effect>
+        <failure>normal</failure>
+        <cost>4</cost>
+    </block>
+
+    <chain>
+        <name>test_series</name>
+        <first>e1</first>
+        <last>e4</last>
+        <element etype="block">
+            <type>b1</type>
+            <label>e1</label>
+            <child>e2</child>
+        </element>
+        <element etype="block">
+            <type>b2</type>
+            <label>e2</label>
+            <parent>e1</parent>
+            <child>e3</child>
+        </element>
+        <element etype="block">
+            <type>b3</type>
+            <label>e3</label>
+            <parent>e2</parent>
+            <child>e4</child>
+        </element>
+        <element etype="block">
+            <type>b4</type>
+            <label>e4</label>
+            <parent>e3</parent>
+        </element>
+    </chain>
+
+    <chain>
+        <name>test_parallel_ordered</name>
+        <first>e1</first>
+        <last>e4</last>
+        <element etype="block">
+            <type>b1</type>
+            <label>e1</label>
+            <child>e2</child>
+            <child>e3</child>
+        </element>
+        <element etype="block">
+            <type>b2</type>
+            <label>e2</label>
+            <parent>e1</parent>
+            <child>e4</child>
+        </element>
+        <element etype="block">
+            <type>b3</type>
+            <label>e3</label>
+            <parent>e1</parent>
+            <child>e4</child>
+        </element>
+        <element etype="block">
+            <type>b4</type>
+            <label>e4</label>
+            <parent>e2</parent>
+            <parent>e3</parent>
+        </element>
+    </chain>
+
+</rmod>

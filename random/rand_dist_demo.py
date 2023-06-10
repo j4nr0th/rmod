@@ -35,7 +35,7 @@ def use_msws(rng: MswsRNG) -> float:
     rng.w1 = (rng.w1 + rng.s1) % ((1 << 64) - 1);
     rng.x1 = (rng.x1 + rng.w1) % ((1 << 64) - 1);
     rng.x1 = ((rng.x1 >> 32) | (rng.x1 << 32));
-    r: int = tmp ^ rng.x1;
+    r: int = (tmp ^ rng.x1) % ((1 << 64) - 1);
     f1 = float(r >> 32) / 4294967296;
     f2 = float(r & ((1 << 32) - 1)) / 4294967296;
     rng.remaining = f1;
@@ -60,27 +60,40 @@ def acorn_create(modulo: int, order: int, seed: int) -> AcoRNG:
 
 
 if __name__ == "__main__":
-    fig, (ax1, ax2) = plt.subplots(2, 1);
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1);
     fig: plt.Figure;
     ax1: plt.Axes;
     ax2: plt.Axes;
     rng = acorn_create(60, 30, 1290412412049941);
 
-    N_SAMPLES = 10000;
+    N_SAMPLES = 1060170;
     sample_array = np.zeros(N_SAMPLES, dtype=np.float64);
     for i in range(N_SAMPLES):
         sample_array[i] = use_rng(rng);
 
-    ax1.hist(sample_array, bins=100);
+    counts, bins = np.histogram(sample_array, bins=100)
+    ax1.stairs(counts, bins);
     ax1.set_title("ACORN")
+    errors = N_SAMPLES / len(counts) - counts
+    print("Acorn's errors:", np.mean(errors), "\nSt. dev.:", np.std(errors))
 
-    # rng = msws_create();
-    # sample_array = np.zeros(N_SAMPLES, dtype=np.float64);
-    # for i in range(N_SAMPLES):
-    #     sample_array[i] = use_msws(rng);
-    #
-    # ax2.hist(sample_array, bins=100);
-    # ax2.set_title("MSWS")
+    rng = msws_create();
+    sample_array = np.zeros(N_SAMPLES, dtype=np.float64);
+    for i in range(N_SAMPLES):
+        sample_array[i] = use_msws(rng);
+
+    counts, bins = np.histogram(sample_array, bins=100)
+    ax2.stairs(counts, bins);
+    ax2.set_title("MSWS")
+    errors = N_SAMPLES / len(counts) - counts
+    print("MSWS's errors:", np.mean(errors), "\nSt. dev.:", np.std(errors))
+
+    sample_array = np.random.rand(N_SAMPLES);
+    counts, bins = np.histogram(sample_array, bins=100)
+    ax3.stairs(counts, bins);
+    ax3.set_title("np.random.rand()")
+    errors = N_SAMPLES / len(counts) - counts
+    print("np.random.rand():", np.mean(errors), "\nSt. dev.:", np.std(errors))
 
     plt.tight_layout();
     plt.show();

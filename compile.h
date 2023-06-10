@@ -33,6 +33,7 @@ struct rmod_graph_struct
     //  Graph information
     c8* module_name;                        //  Should probably set as file name
     c8* graph_type;                         //  Should be the chain's name
+    const rmod_chain* parent;               //  What chain it was created from
 
     //  Node information
     uint_fast32_t node_count;               //  Number of nodes
@@ -47,7 +48,5 @@ struct rmod_graph_struct
 rmod_result rmod_compile_graph(u32 n_types, rmod_element_type* p_types, const char* chain_name, const char* module_name, rmod_graph* p_out);
 
 rmod_result rmod_destroy_graph(rmod_graph* graph);
-
-rmod_result rmod_decompile_graph(rmod_graph* graph, u32* pn_types, rmod_element_type** pp_types);
 
 #endif //RMOD_COMPILE_H

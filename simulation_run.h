@@ -11,8 +11,10 @@
 typedef enum rmod_element_status_enum rmod_element_status;
 enum rmod_element_status_enum
 {
-    RMOD_ELEMENT_STATUS_DOWN = 0,
-    RMOD_ELEMENT_STATUS_WORK = 1,
+    RMOD_ELEMENT_STATUS_DOWN = 0,       //  Component has broken down and needs repair
+    RMOD_ELEMENT_STATUS_WORK = 1,       //  Component is normal-sized and fully functional
+    RMOD_ELEMENT_STATUS_INACTIVE = 2,   //  Component is not broken, but is not working, all components that it depends
+                                        //  on or which it provides for are not working anymore
 };
 
 typedef struct rmod_sim_result_struct rmod_sim_result;
@@ -20,7 +22,7 @@ struct rmod_sim_result_struct
 {
     u64 sim_count;
     f32 total_flow;
-    u64 total_failures;
+    u64 total_maintenance_visits;
     f32 total_costs;
     f32 duration;
     u32 n_components;

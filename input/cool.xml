@@ -1,0 +1,1459 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rmod [
+        <!ELEMENT rmod (block|chain|include)*>
+        <!ELEMENT block (name,mtbf,effect,failure,cost)>
+        <!ELEMENT name (#PCDATA)>
+        <!ELEMENT mtbf (#PCDATA)>
+        <!ELEMENT effect (#PCDATA)>
+        <!ELEMENT failure (#PCDATA)>
+        <!ELEMENT cost (#PCDATA)>
+        <!ELEMENT chain (name,first,last,element+)>
+        <!ELEMENT first (#PCDATA)>
+        <!ELEMENT last (#PCDATA)>
+        <!ELEMENT element (type,label,(child|parent)*)>
+        <!ATTLIST element
+                etype (block|chain) #REQUIRED>
+        <!ELEMENT type (#PCDATA)>
+        <!ELEMENT label (#PCDATA)>
+        <!ELEMENT child (#PCDATA)>
+        <!ELEMENT parent (#PCDATA)>
+        <!ELEMENT include (#PCDATA)>
+        ]>
+<rmod>
+
+        <block>
+                <name>blades</name>
+                <mtbf>0.980000</mtbf>
+                <effect>1.000000</effect>
+                <failure>normal</failure>
+                <cost>1.000000</cost>
+        </block>
+        <block>
+                <name>shaft</name>
+                <mtbf>25.000000</mtbf>
+                <effect>1.000000</effect>
+                <failure>normal</failure>
+                <cost>1.000000</cost>
+        </block>
+        <block>
+                <name>mechanical break</name>
+                <mtbf>100.000000</mtbf>
+                <effect>1.000000</effect>
+                <failure>normal</failure>
+                <cost>1.000000</cost>
+        </block>
+        <block>
+                <name>hub</name>
+                <mtbf>14.290000</mtbf>
+                <effect>1.000000</effect>
+                <failure>normal</failure>
+                <cost>1.000000</cost>
+        </block>
+        <chain>
+                <name>column</name>
+                <first>turbine blades</first>
+                <last>shaft hub</last>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>turbine blades</label>
+                        <child>shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>shaft core</label>
+                        <parent>turbine blades</parent>
+                        <child>mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>mech break</label>
+                        <parent>shaft core</parent>
+                        <child>shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>shaft hub</label>
+                        <parent>mech break</parent>
+                </element>
+        </chain>
+        <block>
+                <name>gearbox</name>
+                <mtbf>6.670000</mtbf>
+                <effect>1.000000</effect>
+                <failure>normal</failure>
+                <cost>1.000000</cost>
+        </block>
+        <block>
+                <name>DFIG</name>
+                <mtbf>8.330000</mtbf>
+                <effect>1.000000</effect>
+                <failure>normal</failure>
+                <cost>1.000000</cost>
+        </block>
+        <block>
+                <name>converter</name>
+                <mtbf>10.000000</mtbf>
+                <effect>1.000000</effect>
+                <failure>normal</failure>
+                <cost>1.000000</cost>
+        </block>
+        <chain>
+                <name>drive train</name>
+                <first>dt gearbox</first>
+                <last>dt converter</last>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>dt gearbox</label>
+                        <child>dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>dt generator</label>
+                        <parent>dt gearbox</parent>
+                        <child>dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>dt converter</label>
+                        <parent>dt generator</parent>
+                </element>
+        </chain>
+        <block>
+                <name>placeholder</name>
+                <mtbf>0.000000</mtbf>
+                <effect>1.000000</effect>
+                <failure>normal</failure>
+                <cost>0.000000</cost>
+        </block>
+        <block>
+                <name>hydraulic</name>
+                <mtbf>4.760000</mtbf>
+                <effect>0.350000</effect>
+                <failure>normal</failure>
+                <cost>1.000000</cost>
+        </block>
+        <block>
+                <name>anemometer</name>
+                <mtbf>25.000000</mtbf>
+                <effect>0.250000</effect>
+                <failure>normal</failure>
+                <cost>1.000000</cost>
+        </block>
+        <block>
+                <name>sensors</name>
+                <mtbf>11.110000</mtbf>
+                <effect>0.100000</effect>
+                <failure>normal</failure>
+                <cost>1.000000</cost>
+        </block>
+        <block>
+                <name>yaw system</name>
+                <mtbf>33.330002</mtbf>
+                <effect>0.300000</effect>
+                <failure>normal</failure>
+                <cost>1.000000</cost>
+        </block>
+        <block>
+                <name>other</name>
+                <mtbf>3.850000</mtbf>
+                <effect>0.100000</effect>
+                <failure>normal</failure>
+                <cost>1.000000</cost>
+        </block>
+        <chain>
+                <name>turbine</name>
+                <first>in</first>
+                <last>out2</last>
+
+                <element etype="block">
+                        <type>placeholder</type>
+                        <label>in</label>
+                        <child>column00::turbine blades</child>
+                        <child>column01::turbine blades</child>
+                        <child>column02::turbine blades</child>
+                        <child>column03::turbine blades</child>
+                        <child>column04::turbine blades</child>
+                        <child>column05::turbine blades</child>
+                        <child>column06::turbine blades</child>
+                        <child>column07::turbine blades</child>
+                        <child>column08::turbine blades</child>
+                        <child>column09::turbine blades</child>
+                        <child>column10::turbine blades</child>
+                        <child>column11::turbine blades</child>
+                        <child>column12::turbine blades</child>
+                        <child>column13::turbine blades</child>
+                        <child>column14::turbine blades</child>
+                        <child>column15::turbine blades</child>
+                        <child>column16::turbine blades</child>
+                        <child>column17::turbine blades</child>
+                        <child>column18::turbine blades</child>
+                        <child>column19::turbine blades</child>
+                        <child>column20::turbine blades</child>
+                        <child>column21::turbine blades</child>
+                        <child>column22::turbine blades</child>
+                        <child>column23::turbine blades</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column00::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column00::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column00::shaft core</label>
+                        <parent>column00::turbine blades</parent>
+                        <child>column00::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column00::mech break</label>
+                        <parent>column00::shaft core</parent>
+                        <child>column00::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column00::shaft hub</label>
+                        <parent>column00::mech break</parent>
+                        <child>drivetrain00::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain00::dt gearbox</label>
+                        <parent>column00::shaft hub</parent>
+                        <child>drivetrain00::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain00::dt generator</label>
+                        <parent>drivetrain00::dt gearbox</parent>
+                        <child>drivetrain00::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain00::dt converter</label>
+                        <parent>drivetrain00::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column01::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column01::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column01::shaft core</label>
+                        <parent>column01::turbine blades</parent>
+                        <child>column01::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column01::mech break</label>
+                        <parent>column01::shaft core</parent>
+                        <child>column01::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column01::shaft hub</label>
+                        <parent>column01::mech break</parent>
+                        <child>drivetrain01::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain01::dt gearbox</label>
+                        <parent>column01::shaft hub</parent>
+                        <child>drivetrain01::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain01::dt generator</label>
+                        <parent>drivetrain01::dt gearbox</parent>
+                        <child>drivetrain01::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain01::dt converter</label>
+                        <parent>drivetrain01::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column02::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column02::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column02::shaft core</label>
+                        <parent>column02::turbine blades</parent>
+                        <child>column02::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column02::mech break</label>
+                        <parent>column02::shaft core</parent>
+                        <child>column02::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column02::shaft hub</label>
+                        <parent>column02::mech break</parent>
+                        <child>drivetrain02::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain02::dt gearbox</label>
+                        <parent>column02::shaft hub</parent>
+                        <child>drivetrain02::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain02::dt generator</label>
+                        <parent>drivetrain02::dt gearbox</parent>
+                        <child>drivetrain02::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain02::dt converter</label>
+                        <parent>drivetrain02::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column03::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column03::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column03::shaft core</label>
+                        <parent>column03::turbine blades</parent>
+                        <child>column03::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column03::mech break</label>
+                        <parent>column03::shaft core</parent>
+                        <child>column03::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column03::shaft hub</label>
+                        <parent>column03::mech break</parent>
+                        <child>drivetrain03::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain03::dt gearbox</label>
+                        <parent>column03::shaft hub</parent>
+                        <child>drivetrain03::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain03::dt generator</label>
+                        <parent>drivetrain03::dt gearbox</parent>
+                        <child>drivetrain03::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain03::dt converter</label>
+                        <parent>drivetrain03::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column04::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column04::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column04::shaft core</label>
+                        <parent>column04::turbine blades</parent>
+                        <child>column04::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column04::mech break</label>
+                        <parent>column04::shaft core</parent>
+                        <child>column04::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column04::shaft hub</label>
+                        <parent>column04::mech break</parent>
+                        <child>drivetrain04::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain04::dt gearbox</label>
+                        <parent>column04::shaft hub</parent>
+                        <child>drivetrain04::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain04::dt generator</label>
+                        <parent>drivetrain04::dt gearbox</parent>
+                        <child>drivetrain04::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain04::dt converter</label>
+                        <parent>drivetrain04::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column05::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column05::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column05::shaft core</label>
+                        <parent>column05::turbine blades</parent>
+                        <child>column05::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column05::mech break</label>
+                        <parent>column05::shaft core</parent>
+                        <child>column05::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column05::shaft hub</label>
+                        <parent>column05::mech break</parent>
+                        <child>drivetrain05::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain05::dt gearbox</label>
+                        <parent>column05::shaft hub</parent>
+                        <child>drivetrain05::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain05::dt generator</label>
+                        <parent>drivetrain05::dt gearbox</parent>
+                        <child>drivetrain05::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain05::dt converter</label>
+                        <parent>drivetrain05::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column06::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column06::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column06::shaft core</label>
+                        <parent>column06::turbine blades</parent>
+                        <child>column06::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column06::mech break</label>
+                        <parent>column06::shaft core</parent>
+                        <child>column06::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column06::shaft hub</label>
+                        <parent>column06::mech break</parent>
+                        <child>drivetrain06::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain06::dt gearbox</label>
+                        <parent>column06::shaft hub</parent>
+                        <child>drivetrain06::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain06::dt generator</label>
+                        <parent>drivetrain06::dt gearbox</parent>
+                        <child>drivetrain06::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain06::dt converter</label>
+                        <parent>drivetrain06::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column07::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column07::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column07::shaft core</label>
+                        <parent>column07::turbine blades</parent>
+                        <child>column07::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column07::mech break</label>
+                        <parent>column07::shaft core</parent>
+                        <child>column07::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column07::shaft hub</label>
+                        <parent>column07::mech break</parent>
+                        <child>drivetrain07::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain07::dt gearbox</label>
+                        <parent>column07::shaft hub</parent>
+                        <child>drivetrain07::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain07::dt generator</label>
+                        <parent>drivetrain07::dt gearbox</parent>
+                        <child>drivetrain07::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain07::dt converter</label>
+                        <parent>drivetrain07::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column08::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column08::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column08::shaft core</label>
+                        <parent>column08::turbine blades</parent>
+                        <child>column08::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column08::mech break</label>
+                        <parent>column08::shaft core</parent>
+                        <child>column08::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column08::shaft hub</label>
+                        <parent>column08::mech break</parent>
+                        <child>drivetrain08::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain08::dt gearbox</label>
+                        <parent>column08::shaft hub</parent>
+                        <child>drivetrain08::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain08::dt generator</label>
+                        <parent>drivetrain08::dt gearbox</parent>
+                        <child>drivetrain08::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain08::dt converter</label>
+                        <parent>drivetrain08::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column09::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column09::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column09::shaft core</label>
+                        <parent>column09::turbine blades</parent>
+                        <child>column09::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column09::mech break</label>
+                        <parent>column09::shaft core</parent>
+                        <child>column09::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column09::shaft hub</label>
+                        <parent>column09::mech break</parent>
+                        <child>drivetrain09::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain09::dt gearbox</label>
+                        <parent>column09::shaft hub</parent>
+                        <child>drivetrain09::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain09::dt generator</label>
+                        <parent>drivetrain09::dt gearbox</parent>
+                        <child>drivetrain09::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain09::dt converter</label>
+                        <parent>drivetrain09::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column10::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column10::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column10::shaft core</label>
+                        <parent>column10::turbine blades</parent>
+                        <child>column10::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column10::mech break</label>
+                        <parent>column10::shaft core</parent>
+                        <child>column10::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column10::shaft hub</label>
+                        <parent>column10::mech break</parent>
+                        <child>drivetrain10::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain10::dt gearbox</label>
+                        <parent>column10::shaft hub</parent>
+                        <child>drivetrain10::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain10::dt generator</label>
+                        <parent>drivetrain10::dt gearbox</parent>
+                        <child>drivetrain10::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain10::dt converter</label>
+                        <parent>drivetrain10::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column11::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column11::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column11::shaft core</label>
+                        <parent>column11::turbine blades</parent>
+                        <child>column11::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column11::mech break</label>
+                        <parent>column11::shaft core</parent>
+                        <child>column11::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column11::shaft hub</label>
+                        <parent>column11::mech break</parent>
+                        <child>drivetrain11::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain11::dt gearbox</label>
+                        <parent>column11::shaft hub</parent>
+                        <child>drivetrain11::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain11::dt generator</label>
+                        <parent>drivetrain11::dt gearbox</parent>
+                        <child>drivetrain11::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain11::dt converter</label>
+                        <parent>drivetrain11::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column12::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column12::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column12::shaft core</label>
+                        <parent>column12::turbine blades</parent>
+                        <child>column12::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column12::mech break</label>
+                        <parent>column12::shaft core</parent>
+                        <child>column12::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column12::shaft hub</label>
+                        <parent>column12::mech break</parent>
+                        <child>drivetrain12::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain12::dt gearbox</label>
+                        <parent>column12::shaft hub</parent>
+                        <child>drivetrain12::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain12::dt generator</label>
+                        <parent>drivetrain12::dt gearbox</parent>
+                        <child>drivetrain12::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain12::dt converter</label>
+                        <parent>drivetrain12::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column13::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column13::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column13::shaft core</label>
+                        <parent>column13::turbine blades</parent>
+                        <child>column13::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column13::mech break</label>
+                        <parent>column13::shaft core</parent>
+                        <child>column13::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column13::shaft hub</label>
+                        <parent>column13::mech break</parent>
+                        <child>drivetrain13::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain13::dt gearbox</label>
+                        <parent>column13::shaft hub</parent>
+                        <child>drivetrain13::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain13::dt generator</label>
+                        <parent>drivetrain13::dt gearbox</parent>
+                        <child>drivetrain13::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain13::dt converter</label>
+                        <parent>drivetrain13::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column14::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column14::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column14::shaft core</label>
+                        <parent>column14::turbine blades</parent>
+                        <child>column14::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column14::mech break</label>
+                        <parent>column14::shaft core</parent>
+                        <child>column14::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column14::shaft hub</label>
+                        <parent>column14::mech break</parent>
+                        <child>drivetrain14::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain14::dt gearbox</label>
+                        <parent>column14::shaft hub</parent>
+                        <child>drivetrain14::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain14::dt generator</label>
+                        <parent>drivetrain14::dt gearbox</parent>
+                        <child>drivetrain14::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain14::dt converter</label>
+                        <parent>drivetrain14::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column15::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column15::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column15::shaft core</label>
+                        <parent>column15::turbine blades</parent>
+                        <child>column15::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column15::mech break</label>
+                        <parent>column15::shaft core</parent>
+                        <child>column15::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column15::shaft hub</label>
+                        <parent>column15::mech break</parent>
+                        <child>drivetrain15::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain15::dt gearbox</label>
+                        <parent>column15::shaft hub</parent>
+                        <child>drivetrain15::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain15::dt generator</label>
+                        <parent>drivetrain15::dt gearbox</parent>
+                        <child>drivetrain15::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain15::dt converter</label>
+                        <parent>drivetrain15::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column16::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column16::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column16::shaft core</label>
+                        <parent>column16::turbine blades</parent>
+                        <child>column16::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column16::mech break</label>
+                        <parent>column16::shaft core</parent>
+                        <child>column16::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column16::shaft hub</label>
+                        <parent>column16::mech break</parent>
+                        <child>drivetrain16::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain16::dt gearbox</label>
+                        <parent>column16::shaft hub</parent>
+                        <child>drivetrain16::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain16::dt generator</label>
+                        <parent>drivetrain16::dt gearbox</parent>
+                        <child>drivetrain16::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain16::dt converter</label>
+                        <parent>drivetrain16::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column17::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column17::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column17::shaft core</label>
+                        <parent>column17::turbine blades</parent>
+                        <child>column17::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column17::mech break</label>
+                        <parent>column17::shaft core</parent>
+                        <child>column17::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column17::shaft hub</label>
+                        <parent>column17::mech break</parent>
+                        <child>drivetrain17::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain17::dt gearbox</label>
+                        <parent>column17::shaft hub</parent>
+                        <child>drivetrain17::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain17::dt generator</label>
+                        <parent>drivetrain17::dt gearbox</parent>
+                        <child>drivetrain17::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain17::dt converter</label>
+                        <parent>drivetrain17::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column18::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column18::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column18::shaft core</label>
+                        <parent>column18::turbine blades</parent>
+                        <child>column18::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column18::mech break</label>
+                        <parent>column18::shaft core</parent>
+                        <child>column18::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column18::shaft hub</label>
+                        <parent>column18::mech break</parent>
+                        <child>drivetrain18::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain18::dt gearbox</label>
+                        <parent>column18::shaft hub</parent>
+                        <child>drivetrain18::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain18::dt generator</label>
+                        <parent>drivetrain18::dt gearbox</parent>
+                        <child>drivetrain18::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain18::dt converter</label>
+                        <parent>drivetrain18::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column19::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column19::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column19::shaft core</label>
+                        <parent>column19::turbine blades</parent>
+                        <child>column19::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column19::mech break</label>
+                        <parent>column19::shaft core</parent>
+                        <child>column19::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column19::shaft hub</label>
+                        <parent>column19::mech break</parent>
+                        <child>drivetrain19::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain19::dt gearbox</label>
+                        <parent>column19::shaft hub</parent>
+                        <child>drivetrain19::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain19::dt generator</label>
+                        <parent>drivetrain19::dt gearbox</parent>
+                        <child>drivetrain19::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain19::dt converter</label>
+                        <parent>drivetrain19::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column20::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column20::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column20::shaft core</label>
+                        <parent>column20::turbine blades</parent>
+                        <child>column20::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column20::mech break</label>
+                        <parent>column20::shaft core</parent>
+                        <child>column20::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column20::shaft hub</label>
+                        <parent>column20::mech break</parent>
+                        <child>drivetrain20::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain20::dt gearbox</label>
+                        <parent>column20::shaft hub</parent>
+                        <child>drivetrain20::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain20::dt generator</label>
+                        <parent>drivetrain20::dt gearbox</parent>
+                        <child>drivetrain20::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain20::dt converter</label>
+                        <parent>drivetrain20::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column21::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column21::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column21::shaft core</label>
+                        <parent>column21::turbine blades</parent>
+                        <child>column21::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column21::mech break</label>
+                        <parent>column21::shaft core</parent>
+                        <child>column21::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column21::shaft hub</label>
+                        <parent>column21::mech break</parent>
+                        <child>drivetrain21::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain21::dt gearbox</label>
+                        <parent>column21::shaft hub</parent>
+                        <child>drivetrain21::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain21::dt generator</label>
+                        <parent>drivetrain21::dt gearbox</parent>
+                        <child>drivetrain21::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain21::dt converter</label>
+                        <parent>drivetrain21::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column22::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column22::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column22::shaft core</label>
+                        <parent>column22::turbine blades</parent>
+                        <child>column22::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column22::mech break</label>
+                        <parent>column22::shaft core</parent>
+                        <child>column22::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column22::shaft hub</label>
+                        <parent>column22::mech break</parent>
+                        <child>drivetrain22::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain22::dt gearbox</label>
+                        <parent>column22::shaft hub</parent>
+                        <child>drivetrain22::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain22::dt generator</label>
+                        <parent>drivetrain22::dt gearbox</parent>
+                        <child>drivetrain22::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain22::dt converter</label>
+                        <parent>drivetrain22::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>blades</type>
+                        <label>column23::turbine blades</label>
+                        <parent>in</parent>
+                        <child>column23::shaft core</child>
+                </element>
+
+                <element etype="block">
+                        <type>shaft</type>
+                        <label>column23::shaft core</label>
+                        <parent>column23::turbine blades</parent>
+                        <child>column23::mech break</child>
+                </element>
+
+                <element etype="block">
+                        <type>mechanical break</type>
+                        <label>column23::mech break</label>
+                        <parent>column23::shaft core</parent>
+                        <child>column23::shaft hub</child>
+                </element>
+
+                <element etype="block">
+                        <type>hub</type>
+                        <label>column23::shaft hub</label>
+                        <parent>column23::mech break</parent>
+                        <child>drivetrain23::dt gearbox</child>
+                </element>
+
+                <element etype="block">
+                        <type>gearbox</type>
+                        <label>drivetrain23::dt gearbox</label>
+                        <parent>column23::shaft hub</parent>
+                        <child>drivetrain23::dt generator</child>
+                </element>
+
+                <element etype="block">
+                        <type>DFIG</type>
+                        <label>drivetrain23::dt generator</label>
+                        <parent>drivetrain23::dt gearbox</parent>
+                        <child>drivetrain23::dt converter</child>
+                </element>
+
+                <element etype="block">
+                        <type>converter</type>
+                        <label>drivetrain23::dt converter</label>
+                        <parent>drivetrain23::dt generator</parent>
+                        <child>out</child>
+                </element>
+
+                <element etype="block">
+                        <type>placeholder</type>
+                        <label>out</label>
+                        <parent>drivetrain00::dt converter</parent>
+                        <parent>drivetrain01::dt converter</parent>
+                        <parent>drivetrain02::dt converter</parent>
+                        <parent>drivetrain03::dt converter</parent>
+                        <parent>drivetrain04::dt converter</parent>
+                        <parent>drivetrain05::dt converter</parent>
+                        <parent>drivetrain06::dt converter</parent>
+                        <parent>drivetrain07::dt converter</parent>
+                        <parent>drivetrain08::dt converter</parent>
+                        <parent>drivetrain09::dt converter</parent>
+                        <parent>drivetrain10::dt converter</parent>
+                        <parent>drivetrain11::dt converter</parent>
+                        <parent>drivetrain12::dt converter</parent>
+                        <parent>drivetrain13::dt converter</parent>
+                        <parent>drivetrain14::dt converter</parent>
+                        <parent>drivetrain15::dt converter</parent>
+                        <parent>drivetrain16::dt converter</parent>
+                        <parent>drivetrain17::dt converter</parent>
+                        <parent>drivetrain18::dt converter</parent>
+                        <parent>drivetrain19::dt converter</parent>
+                        <parent>drivetrain20::dt converter</parent>
+                        <parent>drivetrain21::dt converter</parent>
+                        <parent>drivetrain22::dt converter</parent>
+                        <parent>drivetrain23::dt converter</parent>
+                        <child>hydraulic subsystem</child>
+                        <child>system anemometer</child>
+                        <child>system sensors</child>
+                        <child>YCT</child>
+                        <child>some shit</child>
+                </element>
+
+                <element etype="block">
+                        <type>hydraulic</type>
+                        <label>hydraulic subsystem</label>
+                        <parent>out</parent>
+                        <child>out2</child>
+                </element>
+
+                <element etype="block">
+                        <type>anemometer</type>
+                        <label>system anemometer</label>
+                        <parent>out</parent>
+                        <child>out2</child>
+                </element>
+
+                <element etype="block">
+                        <type>sensors</type>
+                        <label>system sensors</label>
+                        <parent>out</parent>
+                        <child>out2</child>
+                </element>
+
+                <element etype="block">
+                        <type>yaw system</type>
+                        <label>YCT</label>
+                        <parent>out</parent>
+                        <child>out2</child>
+                </element>
+
+                <element etype="block">
+                        <type>other</type>
+                        <label>some shit</label>
+                        <parent>out</parent>
+                        <child>out2</child>
+                </element>
+
+                <element etype="block">
+                        <type>placeholder</type>
+                        <label>out2</label>
+                        <parent>hydraulic subsystem</parent>
+                        <parent>system anemometer</parent>
+                        <parent>system sensors</parent>
+                        <parent>YCT</parent>
+                        <parent>some shit</parent>
+                </element>
+        </chain>
+</rmod>

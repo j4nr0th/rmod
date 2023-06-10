@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rmod [
+        <!ELEMENT rmod (block|chain|include)*>
+        <!ELEMENT block (name,mtbf,effect,failure,cost)>
+        <!ELEMENT name (#PCDATA)>
+        <!ELEMENT mtbf (#PCDATA)>
+        <!ELEMENT effect (#PCDATA)>
+        <!ELEMENT failure (#PCDATA)>
+        <!ELEMENT cost (#PCDATA)>
+        <!ELEMENT chain (name,first,last,element+)>
+        <!ELEMENT first (#PCDATA)>
+        <!ELEMENT last (#PCDATA)>
+        <!ELEMENT element (type,label,(child|parent)*)>
+        <!ATTLIST element
+                etype (block|chain) #REQUIRED>
+        <!ELEMENT type (#PCDATA)>
+        <!ELEMENT label (#PCDATA)>
+        <!ELEMENT child (#PCDATA)>
+        <!ELEMENT parent (#PCDATA)>
+        <!ELEMENT include (#PCDATA)>
+        ]>
+<rmod>
+    <include>column_element.xml</include>
+    <include>drive_train.xml</include>
+
+    <chain>
+        <name>test</name>
+        <first>col1</first>
+        <last>col2</last>
+        <element etype="chain">
+            <type>column</type>
+            <label>col1</label>
+            <child>dt1</child>
+            <child>dt2</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>dt1</label>
+            <parent>col1</parent>
+            <child>col2</child>
+        </element>
+        <element etype="chain">
+            <type>drive train</type>
+            <label>dt2</label>
+            <parent>col1</parent>
+            <child>col2</child>
+        </element>
+        <element etype="chain">
+            <type>column</type>
+            <label>col2</label>
+            <parent>dt1</parent>
+            <parent>dt2</parent>
+        </element>
+    </chain>
+
+    <chain>
+        <name>test2</name>
+        <first>cfirst</first>
+        <last>clast</last>
+        <element etype="chain">
+            <type>test</type>
+            <label>cfirst</label>
+            <child>c1</child>
+            <child>c2</child>
+<!--            <child>c3</child>-->
+        </element>
+        <element etype="chain">
+            <type>test</type>
+            <label>clast</label>
+            <parent>c1</parent>
+            <parent>c2</parent>
+<!--            <parent>c3</parent>-->
+        </element>
+
+
+        <element etype="chain">
+            <type>test</type>
+            <label>c1</label>
+            <parent>cfirst</parent>
+            <child>clast</child>
+        </element>
+        <element etype="chain">
+            <type>test</type>
+            <label>c2</label>
+            <parent>cfirst</parent>
+            <child>clast</child>
+        </element>
+<!--        <element etype="chain">-->
+<!--            <type>test</type>-->
+<!--            <label>c3</label>-->
+<!--            <parent>cfirst</parent>-->
+<!--            <child>clast</child>-->
+<!--        </element>-->
+
+    </chain>
+
+    <chain>
+        <name>test3</name>
+        <first>cfirst</first>
+        <last>clast</last>
+        <element etype="chain">
+            <type>test</type>
+            <label>cfirst</label>
+            <child>c1</child>
+        </element>
+        <element etype="chain">
+            <type>test</type>
+            <label>clast</label>
+            <parent>c2</parent>
+        </element>
+
+
+        <element etype="chain">
+            <type>test</type>
+            <label>c1</label>
+            <parent>cfirst</parent>
+            <child>c2</child>
+        </element>
+        <element etype="chain">
+            <type>test</type>
+            <label>c2</label>
+            <parent>c1</parent>
+            <child>clast</child>
+        </element>
+
+    </chain>
+</rmod>

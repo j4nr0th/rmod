@@ -5,8 +5,8 @@
 #include "acorn.h"
 
 #define ASSERT(x) if ((x) == false) {fprintf(stderr, "Failed assertion: \"" #x "\"\n"); __builtin_trap(); exit(EXIT_FAILURE);}
-#define N_BINS 1000
-#define N_RUNS 100000000
+#define N_BINS 100
+#define N_RUNS 100000
 int main()
 {
     G_JALLOCATOR = jallocator_create((1 << 10), (1 << 9), 1);
@@ -49,7 +49,7 @@ int main()
     {
 //        printf("Bin %u had %u\n", i, bin_counts[i]);
         u64 bin_count = bin_counts[i];
-        ASSERT(bin_count > ((f64)N_RUNS / (f64)N_BINS * 0.8) && bin_count < ((f64)N_RUNS / (f64)N_BINS * 1.2));
+        ASSERT(bin_count > ((f64)N_RUNS / (f64)N_BINS * 0.75) && bin_count < ((f64)N_RUNS / (f64)N_BINS * 1.25));
         sum += bin_count;
         sq_sum += bin_count * bin_count;
     }

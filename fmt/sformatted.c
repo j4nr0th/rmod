@@ -1132,10 +1132,13 @@ char* lin_vasprintf(linear_jallocator* allocator, size_t* p_size, const char* fm
                     j -= 1;
                 }
                 buffer_usage += i;
+                if (precision > 1 || flag_alternative_conversion)
+                {
                 //  Move the last digit forward to make space for the decimal point
-                buffer[(reserved_buffer - (buffer_usage + 1))] = buffer[(reserved_buffer - buffer_usage)];
-                buffer[(reserved_buffer - buffer_usage)] = '.';
-                buffer_usage += 1;
+                    buffer[(reserved_buffer - (buffer_usage + 1))] = buffer[(reserved_buffer - buffer_usage)];
+                    buffer[(reserved_buffer - buffer_usage)] = '.';
+                    buffer_usage += 1;
+                }
                 //  The part missing is the sign and padding
 
 
@@ -1686,6 +1689,10 @@ char* lin_vasprintf(linear_jallocator* allocator, size_t* p_size, const char* fm
                 const size_t reserved_buffer = 64 < precision ? precision : 64;
                 if (!reserve_memory(allocator, memory, &reserved, reserved_buffer)) goto end;
                 char* restrict buffer = lin_jalloc(allocator, reserved_buffer);
+                if (!buffer)
+                {
+                    goto end;
+                }
                 size_t buffer_usage = 0;
                 if (!precision_set)
                 {
@@ -1699,12 +1706,40 @@ char* lin_vasprintf(linear_jallocator* allocator, size_t* p_size, const char* fm
                 uint32_t i;
                 {
                     double alt_frac = frac;
-                    for (i = 0; i < precision && frac != 0.0; ++i)
+                    for (i = 0; i < precision
+                    && (!clear_trailing_zeros || frac != 0.0)
+                    ; ++i)
                     {
                         buffer[(reserved_buffer - buffer_usage - precision + i)] = double_get_dig_and_shift(&alt_frac);
                     }
+                    //  Round last digit
+                    char c = double_get_dig_and_shift(&alt_frac);
+                    if (c >= '5')
+                    {
+                        uint32_t remainder = 1, j = 0;
+                        while (j < precision && remainder)
+                        {
+                            c = buffer[(reserved_buffer - buffer_usage - (j + 1))];
+                            if (c == '9')
+                            {
+                                remainder = 1;
+                                buffer[(reserved_buffer - buffer_usage - (j + 1))] = '0';
+                                j += 1;
+                            }
+                            else
+                            {
+                                remainder = 0;
+                                buffer[(reserved_buffer - buffer_usage - (j + 1))] += 1;
+                            }
+                        }
+                        if (remainder)
+                        {
+                            whole += 1.0;
+                        }
+
+                    }
                     buffer_usage += i;
-                    if ((frac != 0.0 && precision) || flag_alternative_conversion)
+                    if (((!clear_trailing_zeros || frac != 0.0) && precision) || flag_alternative_conversion)
                     {
                         buffer[(reserved_buffer - ++buffer_usage)] = '.';
                     }
@@ -1713,9 +1748,13 @@ char* lin_vasprintf(linear_jallocator* allocator, size_t* p_size, const char* fm
 
                 //  Now print the integer part has to be printed
                 i = 0;
-                for (uintmax_t w = (uintmax_t)whole; w || i < 1; ++i)
+                for (i = 0; i < (pow_integer_part + 1)
+                            && (i < 1 || whole != 0.0)
+                        ; ++i)
                 {
-                    buffer[(reserved_buffer - ++buffer_usage)] = unsigned_get_lsd_dec_and_shift(&w);
+                    double alt_frac = whole / pow(10.0, (double)i);
+                    double v = fmod(alt_frac, 10);
+                    buffer[(reserved_buffer - ++buffer_usage)] = double_get_dig_and_shift(&v);
                 }
                 //  The part missing is the sign and padding
                 assert(flag_pad_leading_zeros == 0 || (flag_left_justify == 0));

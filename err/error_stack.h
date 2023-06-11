@@ -27,7 +27,7 @@ u32 rmod_error_enter_function(const char* fn_name);
 void rmod_error_leave_function(const char* fn_name, u32 level);
 
 void rmod_error_push(rmod_error_level level, u32 line, const char* file, const char* function, const char* fmt, ...);
-[[noreturn]] void rmod_error_report_critical(const char* fmt, ...);
+void rmod_error_report_critical(const char* fmt, ...);
 
 typedef i32 (*rmod_error_report_fn)(u32 total_count, u32 index, rmod_error_level level, u32 line, const char* file, const char* function, const char* message, void* param);
 typedef i32 (*rmod_error_hook_fn)(const char* thread_name, u32 stack_trace_count, const char*const* stack_trace, rmod_error_level level, u32 line, const char* file, const char* function, const char* message, void* param);

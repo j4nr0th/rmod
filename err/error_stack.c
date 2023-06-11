@@ -127,7 +127,7 @@ void rmod_error_push(rmod_error_level level, u32 line, const char* file, const c
     }
 }
 
-[[noreturn]] void rmod_error_report_critical(const char* fmt, ...)
+void rmod_error_report_critical(const char* fmt, ...)
 {
     fprintf(stderr, "Critical error:\n");
     va_list args;

@@ -237,7 +237,11 @@ char* lin_vasprintf(linear_jallocator* allocator, size_t* p_size, const char* fm
                 //  Single character
                 if (length == LENGTH_MOD_l)
                 {
+#ifndef _WIN32
                     wchar_t v = va_arg(args, wint_t);
+#else //!_WIN32
+                    wchar_t v = va_arg(args, int);
+#endif //_WIN32
                     char buffer[8];
                     int len = wctomb(buffer, v);
                     for (int i = 0; i < len; ++i)
@@ -258,7 +262,7 @@ char* lin_vasprintf(linear_jallocator* allocator, size_t* p_size, const char* fm
                     //  Wide string
                     const wchar_t* wstr = va_arg(args, const wchar_t*);
                     const wchar_t* str = wstr;
-                    mbstate_t state = {};
+                    mbstate_t state = {0};
                     size_t len = wcsrtombs(NULL, &str, 0, NULL);
                     if (len != (size_t)-1)
                     {
@@ -997,7 +1001,11 @@ char* lin_vasprintf(linear_jallocator* allocator, size_t* p_size, const char* fm
                         original = (long double)v;
                         double l10 = log10(v);
                         exponent = (intmax_t)l10;
+#ifndef _WIN32
                         base = exp10(l10 - (double) exponent);
+#else //!_WIN32
+                        base = pow(10.0, l10 - (double) exponent);
+#endif //_WIN32
                     }
                 }
                     break;
@@ -1048,7 +1056,11 @@ char* lin_vasprintf(linear_jallocator* allocator, size_t* p_size, const char* fm
                         original = (long double)v;
                         long double l10 = log10l(v);
                         exponent = (intmax_t)l10;
+#ifndef _WIN32
                         base = (double)exp10l(l10 - (long double) exponent);
+#else //!_WIN32
+                        base = (double)powl(10.0L, l10 - (long double) exponent);
+#endif //_WIN32
                     }
                 }
                     break;
@@ -1091,7 +1103,11 @@ char* lin_vasprintf(linear_jallocator* allocator, size_t* p_size, const char* fm
                 //  Now print the d.dddddd part
                 uint32_t i;
                 precision += 1;
+#ifndef _WIN32
                 double v = (double)(original * exp10l((long double)(was_negative ? exponent : -exponent)));
+#else //!_WIN32
+                double v = (double)(original * powl(10.0L, (long double)(was_negative ? exponent : -exponent)));
+#endif //_WIN32
                 for (i = 0; i < precision; ++i)
                 {
                     char c = double_get_dig_and_shift(&v);

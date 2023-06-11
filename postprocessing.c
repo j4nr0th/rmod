@@ -24,7 +24,11 @@ rmod_result rmod_postprocess_results(
     }
     struct tm now;
     const time_t t_now = time(NULL);
+#ifndef _WIN32
     localtime_r(&t_now, &now);
+#else //!_WIN32
+    localtime_s(&now, &t_now);
+#endif //_WIN32
     strftime(intermediate_buffer, 4096, "%x at %T", &now);
     sstream_print(sstream, "Results of simulation on %s:\n\tCalled with arguments:\n", intermediate_buffer);
     lin_jfree(G_LIN_JALLOCATOR, intermediate_buffer);

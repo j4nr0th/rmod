@@ -6,6 +6,7 @@
 #include <wchar.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <math.h>
 
 size_t cprintf(linear_jallocator* support_allocator, const char* fmt, ...)
 {
@@ -207,7 +208,7 @@ size_t vacprintf(linear_jallocator* support_allocator, const char* fmt, va_list 
                     //  Wide string
                     const wchar_t* wstr = va_arg(args, const wchar_t*);
                     const wchar_t* str = wstr;
-                    mbstate_t state = {};
+                    mbstate_t state = {0};
                     size_t len = wcsrtombs(NULL, &str, 0, NULL);
                     if (len != (size_t)-1)
                     {
@@ -930,7 +931,11 @@ size_t vacprintf(linear_jallocator* support_allocator, const char* fmt, va_list 
                         original = (long double)v;
                         double l10 = log10(v);
                         exponent = (intmax_t)l10;
+#ifndef _WIN32
                         base = exp10(l10 - (double) exponent);
+#else //!_WIN32
+                        base = pow(10.0, l10 - (double) exponent);
+#endif //_WIN32
                     }
                 }
                     break;
@@ -981,7 +986,11 @@ size_t vacprintf(linear_jallocator* support_allocator, const char* fmt, va_list 
                         original = (long double)v;
                         long double l10 = log10l(v);
                         exponent = (intmax_t)l10;
+#ifndef _WIN32
                         base = (double)exp10l(l10 - (long double) exponent);
+#else //!_WIN32
+                        base = (double)powl(10.0L, l10 - (long double) exponent);
+#endif //_WIN32
                     }
                 }
                     break;
@@ -1028,7 +1037,11 @@ size_t vacprintf(linear_jallocator* support_allocator, const char* fmt, va_list 
                 //  Now print the d.dddddd part
                 uint32_t i;
                 precision += 1;
+#ifndef _WIN32
                 double v = (double)(original * exp10l((long double)(was_negative ? exponent : -exponent)));
+#else //!_WIN32
+                double v = (double)(original * powl(10.0L, (long double)(was_negative ? exponent : -exponent)));
+#endif //_WIN32
                 for (i = 0; i < precision; ++i)
                 {
                     char c = double_get_dig_and_shift(&v);

@@ -9,26 +9,22 @@
 struct string_stream_struct
 {
     jallocator* p_allocator;
-    linear_jallocator* p_lin_alloc;
     size_t length;
     size_t capacity;
     char* base;
-    char* dbg;
 };
-size_t string_stream_create(linear_jallocator* lin_jallocator, jallocator* allocator, string_stream** p_stream)
+size_t string_stream_create(jallocator* allocator, string_stream** p_stream)
 {
     string_stream* this = jalloc(allocator, sizeof(*this));
     if (!this) return -1;
     memset(this, 0, sizeof(*this));
     this->p_allocator = allocator;
     this->base = jalloc(allocator, 4096);
-    this->dbg = NULL;
     if (!this->base)
     {
         jfree(allocator, this);
         return -1;
     }
-    this->p_lin_alloc = lin_jallocator;
     this->capacity = 4096;
     this->length = 0;
     *p_stream = this;

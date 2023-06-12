@@ -288,7 +288,7 @@ rmod_result rmod_simulate_graph(
             //  Find which failure occurs next
             u32 fail_idx = -1;
             f32 failed_so_far = 0.0f;
-            const f32 fail_measure = (f32) find_next_failure(&rng, system_failure_rate) * system_failure_rate;
+            const f32 fail_measure = (f32) rmod_msws_rngf(&rng) * system_failure_rate;
             for (u32 i = 0; i < node_count; ++i)
             {
                 if (node_status[i] != RMOD_ELEMENT_STATUS_WORK)

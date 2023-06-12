@@ -76,7 +76,7 @@ int main(int argc, const char* argv[])
     rmod_error_set_hook(error_hook, NULL);
     rmod_result res;
     const char* arg_job_desc = NULL;
-    string_segment out_file_name_segment = {0, 0};
+    string_segment out_file_name_segment = {0, 0}, out_intermediate = { 0, 0};
     //  Process arguments
     bool args_wrong = false;
     rmod_cli_config_entry cli_cfg_entries[] =
@@ -89,9 +89,19 @@ int main(int argc, const char* argv[])
                                     .c_str = { .type = RMOD_CFG_VALUE_STR, .p_out = &out_file_name_segment },
                                  },
                     .found = false,
-                    .usage = "-o --output\t<file> output simulation results to <file> instead of to the stdout",
+                    .usage = "-o --output <file>\toutput simulation results to <file> instead of to the stdout",
                     .needed = false,
                   },
+            [1] = {
+                   .display_name = "intermediate types",
+                   .short_name = "I",
+                   .long_name = "intermediate",
+                   .converter ={
+                           .c_str = { .type = RMOD_CFG_VALUE_STR, .p_out = &out_intermediate },
+                   },
+                   .found = false,
+                   .usage = "-I --intermediate <file>\toutput intermediate types with all substitutions present to <file>"
+            }
             };
     const u32 n_cli_cfg_entries = sizeof(cli_cfg_entries) / sizeof(*cli_cfg_entries);
     if (argc < 2)
@@ -205,8 +215,41 @@ int main(int argc, const char* argv[])
     }
     lin_jfree(G_LIN_JALLOCATOR, chain_to_compile);
 
+    if (out_intermediate.begin && out_intermediate.len)
+    {
+        printf("Saving intermediate types to file \"%s\"\n", out_intermediate.begin);setlocale(LC_ALL, "en_US.UTF-8");
+        FILE* f_out = fopen(out_intermediate.begin, "w");
+        if (!f_out)
+        {
+            RMOD_ERROR_CRIT("Failed opening file \"%s\" to output results, reason: %s", out_intermediate.begin, RMOD_ERRNO_MESSAGE);
+        }
+        string_stream* ss;
+        res = string_stream_create(G_JALLOCATOR, &ss);
+        if (res != RMOD_RESULT_SUCCESS)
+        {
+            RMOD_ERROR("Could not create new string stream, reason: %s", rmod_result_str(res));
+            goto after_intermediate_out;
+        }
+        res = rmod_serialize_program(&program, ss);
+        if (res != RMOD_RESULT_SUCCESS)
+        {
+            RMOD_ERROR("Could not serialize types, reason: %s", rmod_result_str(res));
+            string_stream_cleanup(ss);
+            goto after_intermediate_out;
+        }
 
+        fprintf(f_out, "%s\n", string_stream_contents(ss));
+        string_stream_cleanup(ss);
+        if (ferror(f_out))
+        {
+            fclose(f_out);
+            RMOD_ERROR_CRIT("Error occurred while trying to write to file \"%s\", reason: %s", out_file_name_segment.begin, RMOD_ERRNO_MESSAGE);
+        }
+        fclose(f_out);
+        printf("Successfully saved intermediate types to \"%s\"\n", out_intermediate.begin);
+    }
 
+after_intermediate_out:;
     rmod_sim_result results = {0};
     if (thrd_count < 2)
     {
@@ -260,7 +303,7 @@ int main(int argc, const char* argv[])
 //    printf("Total failures: %"PRIu64"\n", total_failures);
 
     string_stream* ss_out;
-    if (string_stream_create(G_LIN_JALLOCATOR, G_JALLOCATOR, &ss_out))
+    if (string_stream_create(G_JALLOCATOR, &ss_out))
     {
         RMOD_ERROR_CRIT("Failed creating output string stream, reason: %s", rmod_result_str(RMOD_RESULT_NOMEM));
     }
@@ -326,7 +369,6 @@ int main(int argc, const char* argv[])
     {
         jallocator* const jallocator = G_JALLOCATOR;
         G_JALLOCATOR = NULL;
-        uint_fast64_t max_alloc_size, total_allocated, max_usage, alloc_count;
         jallocator_destroy(jallocator);
     }
     {

@@ -1,4 +1,4 @@
-from xml.etree import ElementTree as ET
+from xml.etree import ElementTree as Et
 from dataclasses import dataclass
 from subprocess import call
 
@@ -10,8 +10,9 @@ class GraphNode:
     # MTBF: str
     child_array: list
 
+
 if __name__ == "__main__":
-    tree = ET.parse("../input/cool.xml")
+    tree = Et.parse("../input/cool.xml")
     root = tree.getroot()
     chain_elements = []
     assert (root.tag == "rmod")

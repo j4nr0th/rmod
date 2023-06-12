@@ -12,7 +12,7 @@ void rmod_msws_init(rmod_msws_state* rng, u64 x0, u64 x1, u64 w0, u64 w1)
     rng->x0 = x0;
     rng->x1 = x1;
     rng->w0 = w0;
-    rng->w1 = x1;
+    rng->w1 = w1;
     rng->s0 = 0xb5ad4eceda1ce2a9;
     rng->s1 = 0x278c5a4d8419fe6b;
     rng->has_remaining = false;

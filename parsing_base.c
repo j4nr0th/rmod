@@ -357,6 +357,12 @@ rmod_result rmod_parse_xml(const rmod_memory_file* mem_file, rmod_xml_element* p
     u32 stack_depth = 32;
     u32 stack_pos = 0;
     rmod_xml_element** current_stack = jalloc(stack_depth * sizeof(*current_stack));
+    if (!current_stack)
+    {
+        RMOD_ERROR("Failed jalloc (%zu)", stack_depth * sizeof(*current_stack));
+        res = RMOD_RESULT_NOMEM;
+        goto failed;
+    }
     memset(current_stack, 0, stack_depth * sizeof(*current_stack));
     rmod_xml_element* current = &root;
     current_stack[0] = current;

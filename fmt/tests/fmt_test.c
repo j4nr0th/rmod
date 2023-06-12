@@ -16,7 +16,7 @@
 #undef assert
 #define assert(statement) if (!(statement)) {fprintf(stderr, "Failed runtime assertion \"" #statement "\"\n"); exit(EXIT_FAILURE);} (void)0
 #endif
-#define INPUT_VALUES(sf) 13ll, 130.0, DBL_EPSILON, DBL_EPSILON, DBL_EPSILON, 0xDEADBEEF, &sf, u'\u00F1', sample_buffer, 6.9, 2.23e21, 10.099, 11.9
+#define INPUT_VALUES(sf) 13ll, 130.0, DBL_EPSILON, DBL_EPSILON, DBL_EPSILON, 0xDEADBEEF, &(sf), u'\u00F1', sample_buffer, 6.9, 2.23e21, 10.099, 11.9
 int main()
 {
     linear_jallocator* allocator = lin_jallocator_create(1 << 16);
@@ -60,7 +60,6 @@ int main()
     assert(comparison);
     comparison = lin_aprintf(allocator, comparison, &l_compare, fmt_string, INPUT_VALUES(so_far_2));
     assert(comparison);
-    assert(so_far_2 == so_far_1);
     assert(l_compare == l_base);
     assert(strcmp(sample_buffer, comparison) == 0);
     lin_jfree(allocator, comparison);

@@ -594,7 +594,7 @@ int jallocator_verify(jallocator* allocator, int_fast32_t* i_pool, int_fast32_t*
 #ifndef NDEBUG
 #define VERIFICATION_CHECK(x) assert(x)
 #else
-#define VERIFICATION_CHECK(x) if (!(x)) { if (i_pool) *i_pool = i; if (i_block) *i_block = j; return -1;}
+#define VERIFICATION_CHECK(x) if (!(x)) { if (i_pool) *i_pool = i; if (i_block) *i_block = j; return -1;} (void)0
 #endif
 
     for (int_fast32_t i = 0, j = 0; i < allocator->count; ++i, j = -1)

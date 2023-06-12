@@ -65,7 +65,6 @@ rmod_parse_cli(u32 n_entries, rmod_cli_config_entry* entries, u32 n_values, cons
         if ((res = convert_value((string_segment){.begin = value, strlen(value)}, &entry->converter)))
         {
             RMOD_ERROR("Failed converting option \"%s\", reason: %s", entry->display_name, value);
-            res = RMOD_RESULT_BAD_CLI;
             goto failed;
         }
         entry->found = true;

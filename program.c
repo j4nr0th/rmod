@@ -200,3 +200,69 @@ rmod_compile(const rmod_program* program, rmod_graph* graph, const char* chain_n
     RMOD_LEAVE_FUNCTION;
     return res;
 }
+
+rmod_result rmod_serialize_program(const rmod_program* program, string_stream* ss)
+{
+    RMOD_ENTER_FUNCTION;
+    rmod_result res;
+
+    size_t ret_ss = string_stream_add_str(ss,
+                                          "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE rmod [\n"
+                                          "        <!ELEMENT rmod (block|chain|include)*>\n"
+                                          "        <!ELEMENT block (name,mtbf,effect,failure,cost)>\n"
+                                          "        <!ELEMENT name (#PCDATA)>\n"
+                                          "        <!ELEMENT mtbf (#PCDATA)>\n"
+                                          "        <!ELEMENT effect (#PCDATA)>\n"
+                                          "        <!ELEMENT failure (#PCDATA)>\n"
+                                          "        <!ELEMENT cost (#PCDATA)>\n"
+                                          "        <!ELEMENT chain (name,first,last,element+)>\n"
+                                          "        <!ELEMENT first (#PCDATA)>\n"
+                                          "        <!ELEMENT last (#PCDATA)>\n"
+                                          "        <!ELEMENT element (type,label,(child|parent)*)>\n"
+                                          "        <!ATTLIST element\n"
+                                          "                etype (block|chain) #REQUIRED>\n"
+                                          "        <!ELEMENT type (#PCDATA)>\n"
+                                          "        <!ELEMENT label (#PCDATA)>\n"
+                                          "        <!ELEMENT child (#PCDATA)>\n"
+                                          "        <!ELEMENT parent (#PCDATA)>\n"
+                                          "        <!ELEMENT include (#PCDATA)>\n"
+                                          "        ]>\n"
+                                          "<rmod>\n");
+    if (ret_ss == -1)
+    {
+        RMOD_ERROR("Failed adding serialized types to string stream");
+        res = RMOD_RESULT_NOMEM;
+        goto end;
+    }
+
+
+    char* serialized_types;
+    res = rmod_serialize_types(G_LIN_JALLOCATOR, program->n_types, program->p_types, &serialized_types);
+    if (res != RMOD_RESULT_SUCCESS)
+    {
+        RMOD_ERROR("Could not serialize %u types, reason: %s", program->n_types, rmod_result_str(res));
+        goto end;
+    }
+
+    ret_ss = string_stream_add_str(ss, serialized_types);
+    lin_jfree(G_LIN_JALLOCATOR, serialized_types);
+    if (ret_ss == -1)
+    {
+        RMOD_ERROR("Failed adding serialized types to string stream");
+        res = RMOD_RESULT_NOMEM;
+        goto end;
+    }
+
+    ret_ss = string_stream_add_str(ss,
+                                   "</rmod>\n");
+    if (ret_ss == -1)
+    {
+        RMOD_ERROR("Failed adding serialized types to string stream");
+        res = RMOD_RESULT_NOMEM;
+        goto end;
+    }
+
+end:
+    RMOD_LEAVE_FUNCTION;
+    return res;
+}

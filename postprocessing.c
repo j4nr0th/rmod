@@ -47,7 +47,8 @@ rmod_result rmod_postprocess_results(
     f64 mean_flow = results->total_flow / (sim_duration * (f64)results->sim_count);
     sstream_print(sstream, "\n\tSimulation overview:\n"
                            "\t\tMean flow: %g (%.2f%% availability)\n"
-                           "\t\tMean maintenance visits: %"PRIu64"\n"
+                           "\t\tTotal maintenance visits: %"PRIu64"\n"
+                           "\t\tMean maintenance visits: %f\n"
                            "\t\tProcessor time used: %f seconds\n"
                            "\t\tMaximum allocation size: %g kB (%g MB)\n"
                            "\t\tTotal allocated size: %g kb (%g MB)\n"
@@ -56,6 +57,7 @@ rmod_result rmod_postprocess_results(
                   mean_flow,
                   mean_flow / results->max_flow * 100.0,
                   results->total_maintenance_visits,
+                  (f64)results->total_maintenance_visits / results->sim_count,
                   results->duration,
                            ((f64)max_alloc_size) / (1 << 10), ((f64)max_alloc_size) / (1 << 20),
                            ((f64)total_allocated) / (1 << 10), ((f64)total_allocated) / (1 << 20),
@@ -95,13 +97,16 @@ rmod_result rmod_postprocess_results(
         assert(type->header.type_value == RMOD_ELEMENT_TYPE_BLOCK);
         const rmod_block* const block = &type->block;
         const f64 mtbf = (f64)results->sim_count * sim_duration/ (f64)results->failures_per_component[i];
+        const f64 change = block->mtbf != 0.0 ? (mtbf - block->mtbf) / block->mtbf : 0.0;
         fails_per_type[element->type_id] += results->failures_per_component[i];
         component_count[element->type_id] += 1;
         sstream_print(sstream,"\n\t\tComponent \"%.*s\"\n"
                               "\t\t\tType's name: \"%.*s\"\n"
                               "\t\t\tType's MTBF: %g\n"
                               "\t\t\tActual MTBF: %g\n"
-                              "\t\t\tTimes failed: %"PRIu64"\n"
+                              "\t\t\tChange in MTBF: %6.2f %%\n"
+                              "\t\t\tTotal times failed: %"PRIu64"\n"
+                              "\t\t\tAverage times failed: %f\n"
                               "\t\t\tTotal costs: %f\n"
                               "\t\t\tAverage costs: %f\n"
                               "\t\t\tParents:\n",
@@ -109,7 +114,9 @@ rmod_result rmod_postprocess_results(
                       block->header.type_name.len, block->header.type_name.begin,
                       block->mtbf,
                       mtbf,
+                      change * 100.0,
                       results->failures_per_component[i],
+                      (f64)results->failures_per_component[i] / (f64)results->sim_count,
                       (f64)results->failures_per_component[i] * block->cost,
                       (f64)results->failures_per_component[i] * block->cost / (f64)results->sim_count
                       );
@@ -133,7 +140,8 @@ rmod_result rmod_postprocess_results(
         const rmod_block* block = NULL;
         const rmod_graph_node_type* type = graph->type_list + i;
         const u64 type_name_len = strlen((const char*)type->name);
-        for (u32 j = 0; j < program->n_types; ++j)
+        u32 j;
+        for (j = 0; j < program->n_types; ++j)
         {
             const rmod_element_type* current = program->p_types + j;
             if (current->header.type_value == RMOD_ELEMENT_TYPE_BLOCK && current->header.type_name.len == type_name_len &&
@@ -150,25 +158,30 @@ rmod_result rmod_postprocess_results(
             goto failed;
         }
 
-        f64 mtbf = (f64)results->sim_count * sim_duration/ (f64)fails_per_type[i] / (f64)component_count[i];
+        const f64 mtbf = (f64)results->sim_count * sim_duration/ (f64)fails_per_type[j] * (f64)component_count[j];
+        const f64 dif = block->mtbf != 0.0 ? (mtbf - block->mtbf) / block->mtbf : 0.0;
         sstream_print(sstream,"\n\t\tType \"%s\"\n"
                               "\t\t\tTotal components: %u\n"
                               "\t\t\tTotal failures: %"PRIu32"\n"
+                              "\t\t\tAverage failures: %g\n"
                               "\t\t\tType's MTBF: %g\n"
                               "\t\t\tActual MTBF: %g\n"
+                              "\t\t\tChange in MTBF: %6.2f %%\n"
                               "\t\t\tTotal costs: %f\n"
                               "\t\t\tAverage costs: %f\n"
                               "\t\t\tFailure type: %s\n"
                               "\t\t\tEffect: %g\n",
                               type->name,
-                              component_count[i],
-                              fails_per_type[i],
+                              component_count[j],
+                              fails_per_type[j],
+                              (f64)fails_per_type[j] / (f64)component_count[j],
                               block->mtbf,
                               mtbf,
-                              (f64)fails_per_type[i] * type->cost,
-                              (f64)fails_per_type[i] * type->cost / sim_duration / (f64)component_count[i],
+                              dif * 100,
+                              (f64)fails_per_type[j] * type->cost,
+                              (f64)fails_per_type[j] * type->cost / sim_duration,
                               rmod_failure_type_to_str(type->failure_type),
-                              type->effect);
+                              block->effect);
     }
 
     lin_jfree(G_LIN_JALLOCATOR, component_count);

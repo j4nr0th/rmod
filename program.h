@@ -7,6 +7,7 @@
 #include "graph_parsing.h"
 #include "compile.h"
 #include "parsing_base.h"
+#include "fmt/sstream.h"
 
 typedef struct rmod_program_struct rmod_program;
 struct rmod_program_struct
@@ -26,5 +27,7 @@ rmod_result rmod_program_delete(rmod_program* program);
 
 rmod_result
 rmod_compile(const rmod_program* program, rmod_graph* graph, const char* chain_name, const char* module_name);
+
+rmod_result rmod_serialize_program(const rmod_program* program, string_stream* ss);
 
 #endif //RMOD_PROGRAM_H

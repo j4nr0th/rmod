@@ -1306,7 +1306,7 @@ size_t vacprintf(linear_jallocator* support_allocator, const char* fmt, va_list 
                     buffer[(reserved_buffer - buffer_usage)] = '.';
                     buffer_usage += 1;
                 }
-                //  Preappend the 0x/0X
+                //  Pre-append the 0x/0X
                 buffer[(reserved_buffer - ++buffer_usage)] = *ptr == 'A' ? 'X' : 'x';
                 buffer[(reserved_buffer - ++buffer_usage)] = '0';
 

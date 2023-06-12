@@ -4,7 +4,7 @@
 #include "msws.h"
 #include "acorn.h"
 
-#define ASSERT(x) if ((x) == false) {fprintf(stderr, "Failed assertion: \"" #x "\"\n"); __builtin_trap(); exit(EXIT_FAILURE);}
+#define ASSERT(x) if ((x) == false) {fprintf(stderr, "Failed assertion: \"" #x "\"\n"); __builtin_trap(); exit(EXIT_FAILURE);} (void)0
 #define N_BINS 100
 #define N_RUNS 100000
 int main()
@@ -90,7 +90,7 @@ int main()
         sum += bin_count;
         sq_sum += bin_count * bin_count;
     }
-    printf("ACORN measures of spread:\n\tBin count mean: %g\n\tBin count STD: %g\n", (f64)sum / N_BINS, sqrt((f64)(N_BINS * sq_sum - sum * sum) / (N_BINS * N_BINS)));
+    printf("MSWS measures of spread:\n\tBin count mean: %g\n\tBin count STD: %g\n", (f64)sum / N_BINS, sqrt((f64)(N_BINS * sq_sum - sum * sum) / (N_BINS * N_BINS)));
 
 
     jallocator_destroy(G_JALLOCATOR);

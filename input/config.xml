@@ -12,7 +12,7 @@
     <!-- sim_time is the duration of the system is simulated for -->
     <sim_time>25</sim_time>
     <!-- sim_resp is the number of times the system is simulated for -->
-    <sim_reps>25000</sim_reps>
+    <sim_reps>2500</sim_reps>
     <!-- repair_lim is the minimum throughput of the system before repair is issued -->
     <repair_lim>1</repair_lim>
     <!-- filename is the (relative) path to file which to load chain from -->

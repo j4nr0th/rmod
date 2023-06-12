@@ -9,7 +9,7 @@
 
 typedef struct string_stream_struct string_stream;
 
-size_t string_stream_create(linear_jallocator* lin_jallocator, jallocator* allocator, string_stream** p_stream);
+size_t string_stream_create(jallocator* allocator, string_stream** p_stream);
 
 size_t string_stream_add(string_stream* stream, const char* fmt, ...);
 

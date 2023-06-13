@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE rmod [
         <!ELEMENT rmod (block|chain|include)*>
-        <!ELEMENT block (name,mtbf,effect,failure,cost)>
+        <!ELEMENT block (name,mtbf,mtbr,effect,failure,cost)>
         <!ELEMENT name (#PCDATA)>
         <!ELEMENT mtbf (#PCDATA)>
+        <!ELEMENT mtbr (#PCDATA)>
         <!ELEMENT effect (#PCDATA)>
         <!ELEMENT failure (#PCDATA)>
         <!ELEMENT cost (#PCDATA)>
@@ -26,6 +27,7 @@
     <block>
         <name>placeholder</name>
         <mtbf>0</mtbf>
+        <mtbr>0.0001</mtbr>
         <effect>1</effect>
         <failure>critical</failure>
         <cost>0</cost>
@@ -34,6 +36,7 @@
     <block>
         <name>hydraulic</name>
         <mtbf>4.76</mtbf>
+        <mtbr>0.0001</mtbr>
         <effect>0.35</effect>
         <failure>critical</failure>
         <cost>1</cost>
@@ -42,6 +45,7 @@
     <block>
         <name>anemometer</name>
         <mtbf>25</mtbf>
+        <mtbr>0.0001</mtbr>
         <effect>0.25</effect>
         <failure>critical</failure>
         <cost>1</cost>
@@ -50,6 +54,7 @@
     <block>
         <name>sensors</name>
         <mtbf>11.11</mtbf>
+        <mtbr>0.0001</mtbr>
         <effect>0.10</effect>
         <failure>critical</failure>
         <cost>1</cost>
@@ -58,6 +63,7 @@
     <block>
         <name>yaw system</name>
         <mtbf>33.33</mtbf>
+        <mtbr>0.0001</mtbr>
         <effect>0.3</effect>
         <failure>critical</failure>
         <cost>1</cost>
@@ -66,6 +72,7 @@
     <block>
         <name>other</name>
         <mtbf>3.85</mtbf>
+        <mtbr>0.0001</mtbr>
         <effect>0.1</effect>
         <failure>critical</failure>
         <cost>1</cost>

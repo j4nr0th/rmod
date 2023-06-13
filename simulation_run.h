@@ -28,6 +28,7 @@ struct rmod_sim_result_struct
     f32 duration;
     u32 n_components;
     u64* failures_per_component;
+    f64* downtime_per_component;
 };
 
 rmod_result rmod_simulate_graph(

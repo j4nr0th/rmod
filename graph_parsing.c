@@ -225,11 +225,12 @@ rmod_result rmod_convert_xml(
 
             }
             //  This is a block type definition
-            bool found_name = false, found_mtbf = false, found_effect = false, found_failure = false, found_cost = false;
+            bool found_name = false, found_mtbf = false, found_effect = false, found_failure = false, found_cost = false, found_mtbr = false;
             string_segment name_v = {};
             f32 mtbf_v = 0.0f;
             f32 effect_v = 0.0f;
             f32 cost_v = 0.0f;
+            f32 mtbr_v = 0.0f;
             rmod_failure_type failure_type_v = RMOD_FAILURE_TYPE_NONE;
             for (u32 j = 0; j < e->child_count; ++j)
             {
@@ -280,6 +281,36 @@ rmod_result rmod_convert_xml(
                         goto failed;
                     }
                     found_mtbf = true;
+                }
+                else if (COMPARE_STRING_SEGMENT_TO_LITERAL(mtbr, &child->name))
+                {
+                    //  Reliability of the block
+                    if (found_mtbr)
+                    {
+                        RMOD_WARN("Duplicate \"mtbr\" element was found in the element in \"block\" and will be ignored");
+                        continue;
+                    }
+                    if (child->value.len == 0)
+                    {
+                        RMOD_ERROR("Element \"mtbr\" in the element \"block\" was empty");
+                        res = RMOD_RESULT_BAD_XML;
+                        goto failed;
+                    }
+                    char* end_pos;
+                    mtbr_v = strtof(child->value.begin, &end_pos);
+                    if (end_pos != child->value.begin + child->value.len)
+                    {
+                        RMOD_ERROR("Value of \"mtbr\" was given as \"%.*s\" in the element \"block\", which is not allowed (only a single positive float can be given)", child->value.len, child->value.begin);
+                        res = RMOD_RESULT_BAD_XML;
+                        goto failed;
+                    }
+                    if (mtbr_v < 0.0f)
+                    {
+                        RMOD_ERROR("Value of \"mtbr\" was given as \"%g\" in the element \"block\", which is must be positive", mtbr_v);
+                        res = RMOD_RESULT_BAD_XML;
+                        goto failed;
+                    }
+                    found_mtbr = true;
                 }
                 else if (COMPARE_STRING_SEGMENT_TO_LITERAL(effect, &child->name))
                 {
@@ -377,6 +408,10 @@ rmod_result rmod_convert_xml(
             {
                 RMOD_ERROR("Element \"block\" did not include element \"mtbf\"");
             }
+            if (!found_mtbr)
+            {
+                RMOD_ERROR("Element \"block\" did not include element \"mtbr\"");
+            }
             if (!found_effect)
             {
                 RMOD_ERROR("Element \"block\" did not include element \"effect\"");
@@ -390,7 +425,7 @@ rmod_result rmod_convert_xml(
                 RMOD_ERROR("Element \"block\" did not include element \"cost\"");
             }
 
-            if (!found_name || !found_mtbf || !found_effect || !found_failure || !found_cost)
+            if (!found_name || !found_mtbf || !found_effect || !found_failure || !found_cost || !found_mtbr)
             {
                 RMOD_ERROR("Element \"block\" was not complete");
                 res = RMOD_RESULT_BAD_XML;
@@ -428,6 +463,7 @@ rmod_result rmod_convert_xml(
                         .effect = effect_v,
                         .failure_type = failure_type_v,
                         .mtbf = mtbf_v,
+                        .mtbr = mtbr_v,
                         .cost = cost_v,
                         }
                     };

@@ -672,6 +672,7 @@ rmod_result rmod_compile_graph(
             type_array[unique_types].name = name_buffer;
             type_array[unique_types].failure_type = block_type->failure_type;
             type_array[unique_types].failure_rate = (block_type->mtbf == 0.0) ? 0 : 1.0f / block_type->mtbf;
+            type_array[unique_types].repair_time = block_type->mtbr;
             type_array[unique_types].effect = block_type->effect;
             type_array[unique_types].cost = block_type->cost;
             unique_types += 1;

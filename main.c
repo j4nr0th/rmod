@@ -347,6 +347,7 @@ after_intermediate_out:;
 
     printf("Cleaning up\n");
     jfree(results.failures_per_component);
+    jfree(results.downtime_per_component);
     rmod_destroy_graph(&graph_a);
     rmod_program_delete(&program);
     int_fast32_t i_pool, i_chunk;
@@ -369,6 +370,17 @@ after_intermediate_out:;
     {
         jallocator* const jallocator = G_JALLOCATOR;
         G_JALLOCATOR = NULL;
+        uint_fast32_t blocks[128];
+        uint_fast32_t count;
+        if ((count = jallocator_count_used_blocks(jallocator, 128, blocks)) != 0 && count != -1)
+        {
+            printf("Blocks which were not freed by jfree:\n");
+            for (u32 i = 0; i < count; ++i)
+            {
+                printf("\tblock %"PRIuFAST64"\n", blocks[i]);
+            }
+        }
+        
         jallocator_destroy(jallocator);
     }
     {

@@ -1,9 +1,10 @@
 
 <!DOCTYPE rmod [
         <!ELEMENT rmod (block|chain|include)*>
-        <!ELEMENT block (name,mtbf,effect,failure,cost)>
+        <!ELEMENT block (name,mtbf,mtbr,effect,failure,cost)>
         <!ELEMENT name (#PCDATA)>
         <!ELEMENT mtbf (#PCDATA)>
+        <!ELEMENT mtbr (#PCDATA)>
         <!ELEMENT effect (#PCDATA)>
         <!ELEMENT failure (#PCDATA)>
         <!ELEMENT cost (#PCDATA)>
@@ -23,6 +24,7 @@
     <block>
         <name>b1</name>
         <mtbf>10</mtbf>
+        <mtbr>21</mtbr>
         <effect>1</effect>
         <failure>normal</failure>
         <cost>1</cost>
@@ -31,6 +33,7 @@
     <block>
         <name>b2</name>
         <mtbf>20</mtbf>
+        <mtbr>21</mtbr>
         <effect>2</effect>
         <failure>normal</failure>
         <cost>2</cost>
@@ -39,6 +42,7 @@
     <block>
         <name>b3</name>
         <mtbf>30</mtbf>
+        <mtbr>21</mtbr>
         <effect>3</effect>
         <failure>normal</failure>
         <cost>3</cost>
@@ -47,6 +51,7 @@
     <block>
         <name>b4</name>
         <mtbf>40</mtbf>
+        <mtbr>21</mtbr>
         <effect>4</effect>
         <failure>normal</failure>
         <cost>4</cost>

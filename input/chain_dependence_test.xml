@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE rmod [
         <!ELEMENT rmod (block|chain|include)*>
-        <!ELEMENT block (name,mtbf,effect,failure,cost)>
+        <!ELEMENT block (name,mtbf,mtbr,effect,failure,cost)>
         <!ELEMENT name (#PCDATA)>
         <!ELEMENT mtbf (#PCDATA)>
+        <!ELEMENT mtbr (#PCDATA)>
         <!ELEMENT effect (#PCDATA)>
         <!ELEMENT failure (#PCDATA)>
         <!ELEMENT cost (#PCDATA)>
@@ -23,6 +24,7 @@
     <block>
         <name>block a</name>
         <mtbf>0.96</mtbf>
+        <mtbr>21</mtbr>
         <effect>3.14</effect>
         <failure>critical</failure>
         <cost>2</cost>

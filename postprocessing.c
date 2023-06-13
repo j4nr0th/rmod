@@ -82,6 +82,12 @@ rmod_result rmod_postprocess_results(
         RMOD_ERROR("Failed allocating memory for array of fails per component type: failed lin_jalloc(%p, %zu)", G_LIN_JALLOCATOR, sizeof(*fails_per_type) * program->n_types);
         goto failed;
     }
+    f64* const downtime_per_type = lin_jalloc(G_LIN_JALLOCATOR, sizeof(*downtime_per_type) * program->n_types);
+    if (!downtime_per_type)
+    {
+        RMOD_ERROR("Failed allocating memory for array of fails per component type: failed lin_jalloc(%p, %zu)", G_LIN_JALLOCATOR, sizeof(*downtime_per_type) * program->n_types);
+        goto failed;
+    }
     u32* const component_count = lin_jalloc(G_LIN_JALLOCATOR, sizeof(*component_count) * program->n_types);
     if (!component_count)
     {
@@ -89,6 +95,7 @@ rmod_result rmod_postprocess_results(
         goto failed;
     }
     memset(fails_per_type, 0, sizeof(*fails_per_type) * program->n_types);
+    memset(downtime_per_type, 0, sizeof(*downtime_per_type) * program->n_types);
     memset(component_count, 0, sizeof(*component_count) * program->n_types);
     for (u32 i = 0; i < chain->element_count; ++i)
     {
@@ -100,25 +107,25 @@ rmod_result rmod_postprocess_results(
         const f64 change = block->mtbf != 0.0 ? (mtbf - block->mtbf) / block->mtbf : 0.0;
         fails_per_type[element->type_id] += results->failures_per_component[i];
         component_count[element->type_id] += 1;
+        assert(element->type_id <= program->n_types);
+        downtime_per_type[element->type_id] += results->downtime_per_component[i];
         sstream_print(sstream,"\n\t\tComponent \"%.*s\"\n"
                               "\t\t\tType's name: \"%.*s\"\n"
                               "\t\t\tType's MTBF: %g\n"
                               "\t\t\tActual MTBF: %g\n"
                               "\t\t\tChange in MTBF: %6.2f %%\n"
-                              "\t\t\tTotal times failed: %"PRIu64"\n"
                               "\t\t\tAverage times failed: %f\n"
-                              "\t\t\tTotal costs: %f\n"
                               "\t\t\tAverage costs: %f\n"
+                              "\t\t\tAverage downtime: %f\n"
                               "\t\t\tParents:\n",
                       element->label.len, element->label.begin,
                       block->header.type_name.len, block->header.type_name.begin,
                       block->mtbf,
                       mtbf,
                       change * 100.0,
-                      results->failures_per_component[i],
                       (f64)results->failures_per_component[i] / (f64)results->sim_count,
-                      (f64)results->failures_per_component[i] * block->cost,
-                      (f64)results->failures_per_component[i] * block->cost / (f64)results->sim_count
+                      (f64)results->failures_per_component[i] * block->cost / (f64)results->sim_count,
+                      (f64)results->downtime_per_component[i] / (f64)results->sim_count
                       );
         for (u32 j = 0; j < element->parent_count; ++j)
         {
@@ -162,29 +169,28 @@ rmod_result rmod_postprocess_results(
         const f64 dif = block->mtbf != 0.0 ? (mtbf - block->mtbf) / block->mtbf : 0.0;
         sstream_print(sstream,"\n\t\tType \"%s\"\n"
                               "\t\t\tTotal components: %u\n"
-                              "\t\t\tTotal failures: %"PRIu32"\n"
-                              "\t\t\tAverage failures: %g\n"
+                              "\t\t\tAverage failures per component: %g\n"
                               "\t\t\tType's MTBF: %g\n"
                               "\t\t\tActual MTBF: %g\n"
                               "\t\t\tChange in MTBF: %6.2f %%\n"
-                              "\t\t\tTotal costs: %f\n"
                               "\t\t\tAverage costs: %f\n"
+                              "\t\t\tAverage downtime per component: %f\n"
                               "\t\t\tFailure type: %s\n"
                               "\t\t\tEffect: %g\n",
                               type->name,
                               component_count[j],
-                              fails_per_type[j],
                               (f64)fails_per_type[j] / (f64)component_count[j],
                               block->mtbf,
                               mtbf,
                               dif * 100,
-                              (f64)fails_per_type[j] * type->cost,
                               (f64)fails_per_type[j] * type->cost / sim_duration,
+                              (f64)downtime_per_type[j] / (f64)component_count[j] / sim_duration,
                               rmod_failure_type_to_str(type->failure_type),
                               block->effect);
     }
 
     lin_jfree(G_LIN_JALLOCATOR, component_count);
+    lin_jfree(G_LIN_JALLOCATOR, downtime_per_type);
     lin_jfree(G_LIN_JALLOCATOR, fails_per_type);
     
 

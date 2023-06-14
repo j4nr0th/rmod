@@ -12,13 +12,13 @@
     <!-- sim_time is the duration of the system is simulated for -->
     <sim_time>25</sim_time>
     <!-- sim_resp is the number of times the system is simulated for -->
-    <sim_reps>250</sim_reps>
+    <sim_reps>100000</sim_reps>
     <!-- repair_lim is the minimum throughput of the system before repair is issued -->
-    <repair_lim>1</repair_lim>
+    <repair_lim>13.2</repair_lim>
     <!-- filename is the (relative) path to file which to load chain from -->
     <filename>turbine.xml</filename>
     <!-- threads is the count of threads used to compute -->
-    <threads>2</threads>
+    <threads>8</threads>
     <!-- chain is the name of the chain which will be used to simulate the system -->
     <chain>turbine</chain>
 </config>

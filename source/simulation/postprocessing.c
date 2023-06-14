@@ -47,7 +47,6 @@ rmod_result rmod_postprocess_results(
     f64 mean_flow = results->total_flow / (sim_duration * (f64)results->sim_count);
     sstream_print(sstream, "\n\tSimulation overview:\n"
                            "\t\tMean flow: %g (%.2f%% availability)\n"
-                           "\t\tTotal maintenance visits: %"PRIu64"\n"
                            "\t\tMean maintenance visits: %f\n"
                            "\t\tProcessor time used: %f seconds\n"
                            "\t\tMaximum allocation size: %g kB (%g MB)\n"
@@ -56,7 +55,6 @@ rmod_result rmod_postprocess_results(
                            "\t\tTotal allocation count: %"PRIuFAST64"\n",
                   mean_flow,
                   mean_flow / results->max_flow * 100.0,
-                  results->total_maintenance_visits,
                   (f64)results->total_maintenance_visits / results->sim_count,
                   results->duration,
                            ((f64)max_alloc_size) / (1 << 10), ((f64)max_alloc_size) / (1 << 20),
@@ -179,7 +177,7 @@ rmod_result rmod_postprocess_results(
                               "\t\t\tEffect: %g\n",
                               type->name,
                               component_count[j],
-                              (f64)fails_per_type[j] / (f64)component_count[j],
+                              (f64)fails_per_type[j] / (f64)component_count[j] / (f64)results->sim_count,
                               block->mtbf,
                               mtbf,
                               dif * 100,

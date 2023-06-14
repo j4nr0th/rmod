@@ -5,7 +5,7 @@
 #ifndef RMOD_PARSING_BASE_H
 #define RMOD_PARSING_BASE_H
 
-#include "rmod.h"
+#include "../common/rmod.h"
 
 typedef struct string_segment_struct string_segment;
 typedef struct rmod_xml_element_struct rmod_xml_element;

@@ -4,7 +4,7 @@
 
 #ifndef RMOD_SIMULATION_RUN_H
 #define RMOD_SIMULATION_RUN_H
-#include "rmod.h"
+#include "../common/rmod.h"
 #include "compile.h"
 //#include "random/acorn.h"
 

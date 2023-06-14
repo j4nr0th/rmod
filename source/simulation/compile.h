@@ -4,7 +4,7 @@
 
 #ifndef RMOD_COMPILE_H
 #define RMOD_COMPILE_H
-#include "graph_parsing.h"
+#include "../parsing/graph_parsing.h"
 
 
 typedef uint_fast32_t rmod_graph_node_id, rmod_graph_type_id;

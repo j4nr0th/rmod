@@ -4,8 +4,8 @@
 
 #ifndef RMOD_ACORN_H
 #define RMOD_ACORN_H
-#include "../common.h"
-#include "../rmod.h"
+#include "../common/common.h"
+#include "../common/rmod.h"
 typedef struct rmod_acorn_state_struct rmod_acorn_state;
 struct rmod_acorn_state_struct
 {

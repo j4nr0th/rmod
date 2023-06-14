@@ -4,10 +4,10 @@
 
 #ifndef RMOD_PROGRAM_H
 #define RMOD_PROGRAM_H
-#include "graph_parsing.h"
+#include "../parsing/graph_parsing.h"
 #include "compile.h"
-#include "parsing_base.h"
-#include "fmt/sstream.h"
+#include "../parsing/parsing_base.h"
+#include "../fmt/sstream.h"
 
 typedef struct rmod_program_struct rmod_program;
 struct rmod_program_struct

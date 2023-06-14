@@ -5,7 +5,7 @@
 #ifndef RMOD_ERROR_STACK_H
 #define RMOD_ERROR_STACK_H
 #include "error_codes.h"
-#include "../common.h"
+#include "../common/common.h"
 #include <errno.h>
 
 typedef enum rmod_error_level_enum rmod_error_level;

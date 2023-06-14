@@ -4,9 +4,9 @@
 
 #ifndef RMOD_POSTPROCESSING_H
 #define RMOD_POSTPROCESSING_H
-#include "rmod.h"
+#include "../common/rmod.h"
 #include "simulation_run.h"
-#include "fmt/sstream.h"
+#include "../fmt/sstream.h"
 #include "compile.h"
 #include "program.h"
 

@@ -43,8 +43,8 @@ typedef uint_least32_t c32;
 
 
 //  My custom memory allocation functions
-#include "mem/jalloc.h"
-#include "mem/lin_jalloc.h"
+#include "../mem/jalloc.h"
+#include "../mem/lin_jalloc.h"
 
 
 extern jallocator* G_JALLOCATOR;

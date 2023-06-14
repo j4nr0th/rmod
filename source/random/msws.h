@@ -9,7 +9,7 @@
 #define RMOD_MSWS_H
 #include <stdint.h>
 #include <stdbool.h>
-#include "../common.h"
+#include "../common/common.h"
 
 typedef struct rmod_msws_state_struct rmod_msws_state;
 struct rmod_msws_state_struct

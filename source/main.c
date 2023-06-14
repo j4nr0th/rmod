@@ -1,19 +1,19 @@
-#include "rmod.h"
-#include "compile.h"
-#include "program.h"
+#include "common/rmod.h"
+#include "simulation/compile.h"
+#include "simulation/program.h"
 #include "random/msws.h"
-#include "simulation_run.h"
-#include "parsing_base.h"
+#include "simulation/simulation_run.h"
+#include "parsing/parsing_base.h"
 #include <inttypes.h>
 #include <stdio.h>
 #include <libgen.h>
 #include <float.h>
 #include <locale.h>
 #include <unistd.h>
-#include "config_parsing.h"
+#include "parsing/config_parsing.h"
 #include "fmt/sformatted.h"
-#include "postprocessing.h"
-#include "cli_parsing.h"
+#include "simulation/postprocessing.h"
+#include "parsing/cli_parsing.h"
 
 static i32 error_hook(const char* thread_name, u32 stack_trace_count, const char*const* stack_trace, rmod_error_level level, u32 line, const char* file, const char* function, const char* message, void* param)
 {
@@ -50,6 +50,10 @@ static i32 error_hook(const char* thread_name, u32 stack_trace_count, const char
 
 int main(int argc, const char* argv[])
 {
+    printf("RMOD  Copyright (C) 2023  Jan Roth\n"
+           "    This program comes with ABSOLUTELY NO WARRANTY.\n"
+           "    This is free software, and you are welcome to redistribute it\n"
+           "    under certain conditions; see GPLv3.\n");
     //  Main function of the RMOD program
     printf("Initializing error handling and memory allocators\n");
 

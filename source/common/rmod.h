@@ -6,7 +6,7 @@
 #define RMOD_RMOD_H
 #include <limits.h>
 #include "common.h"
-#include "err/error_stack.h"
+#include "../err/error_stack.h"
 
 typedef struct rmod_memory_file_struct rmod_memory_file;
 
